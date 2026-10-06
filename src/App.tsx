@@ -2,9 +2,141 @@ import React, { useState } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 
 // ==========================================
+// LOGIN PAGE COMPONENT
+// ==========================================
+function LoginPage({ onLogin }: { onLogin: (user: { name: string; grade: string; school: string }) => void }) {
+  const [username, setUsername] = useState('alex_m');
+  const [password, setPassword] = useState('valley2026');
+  const [error, setError] = useState('');
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username.trim().toLowerCase() === 'alex_m' && password === 'valley2026') {
+      onLogin({ name: 'Alex M.', grade: '7th Grade', school: 'Bakersfield Middle School' });
+    } else {
+      setError('Invalid username or password. (Hint: Use pre-filled demo account or Quick Login below)');
+    }
+  };
+
+  const handleQuickLogin = (student: { name: string; grade: string; school: string }) => {
+    onLogin(student);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
+      {/* App Branding */}
+      <div className="mb-8 text-center space-y-2">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-400 text-slate-900 font-black text-2xl rounded-2xl shadow-lg">
+          VQ
+        </div>
+        <h1 className="text-3xl font-extrabold text-white tracking-wide">ValleyQuest</h1>
+        <p className="text-slate-400 text-sm">Central Valley Environmental & Learning Portal</p>
+      </div>
+
+      {/* Login Card */}
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-slate-100 space-y-6">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 text-center">Student Portal Sign In</h2>
+          <p className="text-xs text-slate-500 text-center mt-1">Enter your credentials to access your Safe-Day Dashboard</p>
+        </div>
+
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-semibold text-center">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              Username / Sync ID
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setError('');
+              }}
+              placeholder="e.g. alex_m"
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              Passcode
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError('');
+              }}
+              placeholder="••••••••"
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-[#1b365d] hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-sm transition shadow-md"
+          >
+            Sign In to Dashboard
+          </button>
+        </form>
+
+        {/* Quick Demo Login Profiles */}
+        <div className="pt-4 border-t border-slate-100">
+          <p className="text-xs text-slate-400 font-semibold text-center mb-3 uppercase tracking-wider">
+            Quick Demo Login Profiles
+          </p>
+          <div className="space-y-2">
+            <button
+              onClick={() => handleQuickLogin({ name: 'Alex M.', grade: '7th Grade', school: 'Bakersfield Middle School' })}
+              className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-xl hover:bg-blue-50/50 transition text-left group"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-bold flex items-center justify-center text-xs">
+                  AM
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800 group-hover:text-blue-900">Alex M.</p>
+                  <p className="text-[10px] text-slate-400">7th Grade • Bakersfield Middle School</p>
+                </div>
+              </div>
+              <span className="text-xs text-blue-600 font-bold">Sign In →</span>
+            </button>
+
+            <button
+              onClick={() => handleQuickLogin({ name: 'Maya M.', grade: '5th Grade', school: 'Bakersfield Elementary' })}
+              className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-xl hover:bg-emerald-50/50 transition text-left group"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
+                  MM
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-900">Maya M.</p>
+                  <p className="text-[10px] text-slate-400">5th Grade • Bakersfield Elementary</p>
+                </div>
+              </div>
+              <span className="text-xs text-emerald-600 font-bold">Sign In →</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
 // 1. SAFE-DAY DASHBOARD
 // ==========================================
-function SafeDayDashboard() {
+function SafeDayDashboard({ currentUser }: { currentUser: { name: string; grade: string; school: string } }) {
   return (
     <div className="p-6 space-y-6">
       <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex justify-between items-center">
@@ -78,7 +210,9 @@ function SafeDayDashboard() {
       <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
         <div className="flex items-center space-x-2">
           <span className="text-blue-600">🛡️</span>
-          <h4 className="font-bold text-slate-900 text-lg">Custom Recommendations for Alex M. (7th Grade)</h4>
+          <h4 className="font-bold text-slate-900 text-lg">
+            Custom Recommendations for {currentUser.name} ({currentUser.grade})
+          </h4>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
@@ -175,7 +309,7 @@ function ActivityPlanner() {
 }
 
 // ==========================================
-// 3. INVITE & CONNECTIONS (FULLY EXPANDED)
+// 3. INVITE & CONNECTIONS
 // ==========================================
 function InviteView() {
   const [students, setStudents] = useState([
@@ -234,7 +368,6 @@ function InviteView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* Active Student Profiles */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
             <h3 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
               <span>🎓</span>
@@ -263,7 +396,6 @@ function InviteView() {
             </div>
           </div>
 
-          {/* Create Individual Student Account */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
             <h3 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
               <span>👤</span>
@@ -330,9 +462,7 @@ function InviteView() {
           </div>
         </div>
 
-        {/* Right Side Column */}
         <div className="space-y-6">
-          {/* Connect to Teacher Code */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
             <h3 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
               <span>🏫</span>
@@ -372,7 +502,6 @@ function InviteView() {
             )}
           </div>
 
-          {/* Guardian Invites */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
             <h3 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
               <span>✉️</span>
@@ -498,7 +627,7 @@ function WaterMovement() {
 }
 
 // ==========================================
-// 6. STUDY BUDDY
+// OTHER VIEWS
 // ==========================================
 function StudyBuddy() {
   return (
@@ -524,9 +653,6 @@ function StudyBuddy() {
   );
 }
 
-// ==========================================
-// 7. READING TRACKER
-// ==========================================
 function ReadingTracker() {
   return (
     <div className="p-6 space-y-6">
@@ -548,9 +674,6 @@ function ReadingTracker() {
   );
 }
 
-// ==========================================
-// 8. STEM BOARD
-// ==========================================
 function STEMBoard() {
   return (
     <div className="p-6 space-y-6">
@@ -574,9 +697,6 @@ function STEMBoard() {
   );
 }
 
-// ==========================================
-// 9. SCIENCE-FAIR COACH
-// ==========================================
 function ScienceFairCoach() {
   return (
     <div className="p-6 space-y-6">
@@ -596,9 +716,6 @@ function ScienceFairCoach() {
   );
 }
 
-// ==========================================
-// 10. WORLD WINDOW (SPANISH)
-// ==========================================
 function WorldWindow() {
   return (
     <div className="p-6 space-y-6">
@@ -616,9 +733,6 @@ function WorldWindow() {
   );
 }
 
-// ==========================================
-// 11. WELLBEING & MOOD
-// ==========================================
 function WellbeingMood() {
   const [mood, setMood] = useState('😊 Energetic');
   return (
@@ -647,9 +761,6 @@ function WellbeingMood() {
   );
 }
 
-// ==========================================
-// 12. CREATOR ARCADE
-// ==========================================
 function CreatorArcade() {
   return (
     <div className="p-6 space-y-6">
@@ -668,9 +779,6 @@ function CreatorArcade() {
   );
 }
 
-// ==========================================
-// 13. GUARDIAN & CAC TESTS
-// ==========================================
 function GuardianCAC() {
   return (
     <div className="p-6 space-y-6">
@@ -688,10 +796,15 @@ function GuardianCAC() {
 }
 
 // ==========================================
-// MAIN APP COMPONENT & SIDEBAR
+// MAIN APP COMPONENT
 // ==========================================
 export default function App() {
+  const [user, setUser] = useState<{ name: string; grade: string; school: string } | null>(null);
   const location = useLocation();
+
+  if (!user) {
+    return <LoginPage onLogin={(loggedUser) => setUser(loggedUser)} />;
+  }
 
   const navItems = [
     { path: '/', label: 'Safe-Day Dashboard', icon: '🛡️', badge: null },
@@ -711,7 +824,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100/70 flex flex-col font-sans">
-      {/* Top Header matching original mockup (Fig 1) */}
+      {/* Top Header */}
       <header className="bg-[#1b365d] text-white px-6 py-3 flex justify-between items-center shadow-md">
         <div className="flex items-center space-x-3">
           <div className="bg-amber-400 text-slate-900 font-black px-2 py-1 rounded text-sm tracking-tight">
@@ -723,18 +836,33 @@ export default function App() {
           </span>
         </div>
 
-        <div className="flex items-center space-x-2 text-xs">
-          <span className="bg-amber-500 text-slate-900 font-bold px-2 py-1 rounded">Scenario: Normal</span>
-          <span className="text-slate-300 px-2 py-1 hover:bg-slate-700/50 rounded cursor-pointer">Excessive</span>
-          <span className="text-slate-300 px-2 py-1 hover:bg-slate-700/50 rounded cursor-pointer">Unhealthy</span>
-          <span className="text-slate-300 px-2 py-1 hover:bg-slate-700/50 rounded cursor-pointer">Dense</span>
-          <span className="bg-blue-600/60 px-2.5 py-1 rounded text-white flex items-center space-x-1">
-            <span>🔄</span> <span>Live API</span>
-          </span>
+        <div className="flex items-center space-x-4 text-xs">
+          <div className="flex items-center space-x-2">
+            <span className="bg-amber-500 text-slate-900 font-bold px-2 py-1 rounded">Scenario: Normal</span>
+            <span className="text-slate-300 px-2 py-1 hover:bg-slate-700/50 rounded cursor-pointer">Excessive</span>
+            <span className="text-slate-300 px-2 py-1 hover:bg-slate-700/50 rounded cursor-pointer">Unhealthy</span>
+            <span className="text-slate-300 px-2 py-1 hover:bg-slate-700/50 rounded cursor-pointer">Dense</span>
+            <span className="bg-blue-600/60 px-2.5 py-1 rounded text-white flex items-center space-x-1">
+              <span>🔄</span> <span>Live API</span>
+            </span>
+          </div>
+
+          <div className="border-l border-slate-700 pl-4 flex items-center space-x-3">
+            <div className="text-right">
+              <p className="font-bold text-white text-xs">{user.name}</p>
+              <p className="text-[10px] text-slate-300">{user.grade}</p>
+            </div>
+            <button
+              onClick={() => setUser(null)}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded text-xs font-semibold border border-slate-600 transition"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Main Layout with White Sidebar */}
+      {/* Main Layout */}
       <div className="flex flex-1">
         <aside className="w-64 bg-white border-r border-slate-200/80 p-4 space-y-1 shrink-0">
           {navItems.map((item) => {
@@ -769,7 +897,7 @@ export default function App() {
 
         <main className="flex-1 overflow-y-auto">
           <Routes>
-            <Route path="/" element={<SafeDayDashboard />} />
+            <Route path="/" element={<SafeDayDashboard currentUser={user} />} />
             <Route path="/activity" element={<ActivityPlanner />} />
             <Route path="/invite" element={<InviteView />} />
             <Route path="/teachers" element={<TeachersCorner />} />
@@ -788,6 +916,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
