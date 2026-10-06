@@ -146,3 +146,5 @@ const getDefaultLocationData = (zip: string): LocationContext => ({
   stemEvents: [],
   districtAnnouncements: [],
 });
+
+export default App;
