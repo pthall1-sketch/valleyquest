@@ -137,6 +137,12 @@ const getDefaultLocationData = (zip: string): LocationContext => ({
   city: 'Central Valley Community',
   county: 'San Joaquin',
   airDistrict: 'SJVAPCD - San Joaquin Valley Air Basin',
+  monitoringStation: 'Central Valley Regional Station',
+  schoolDistrict: 'Central Valley Unified School District',
+  aqi: 50,
+  temp: 70,
+  pm25: 12.0,
+  fogRisk: 'Low Fog Advisory',
+  stemEvents: [],
+  districtAnnouncements: [],
 });
-
-export default App; // Ensure your main App component is exported at the bottom
