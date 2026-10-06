@@ -135,6 +135,8 @@ const CENTRAL_VALLEY_ZIP_DB: Record<string, LocationContext> = {
 const getDefaultLocationData = (zip: string): LocationContext => ({
   zip,
   city: 'Central Valley Community',
-  county: 'San Joaquin', // Or leave empty/null if unknown for default fallback
+  county: 'San Joaquin',
   airDistrict: 'SJVAPCD - San Joaquin Valley Air Basin',
 });
+
+export default App; // Ensure your main App component is exported at the bottom
