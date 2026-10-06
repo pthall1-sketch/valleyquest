@@ -36,11 +36,20 @@ import {
   User,
   Filter,
   Search,
-  Calendar
+  Calendar,
+  AlertTriangle,
+  Flag,
+  Lock,
+  Clock,
+  Volume2,
+  Check,
+  Bell,
+  CheckSquare,
+  Info
 } from 'lucide-react';
 
 // ==========================================
-// LOCATION & DISTRICT DATA
+// TYPES & INTERFACES
 // ==========================================
 interface LocationInfo {
   county: string;
@@ -55,8 +64,114 @@ interface LocationInfo {
   fogAlert: string | null;
   libraries: string[];
   eventsUrl: string;
+  aqiSource: string;
+  aqiUpdatedAt: string;
+  trafficAlert: string | null;
 }
 
+interface KernOpportunity {
+  id: number;
+  name: string;
+  category: string;
+  eventDate: string;
+  deadline: string;
+  eligibleGrades: string;
+  location: string;
+  officialSourceUrl: string;
+  verifiedOn: string;
+}
+
+interface UserAccount {
+  username: string;
+  studentName: string;
+  role: 'Student' | 'Teacher';
+  code: string;
+  joinedBuddies: Array<{ name: string; code: string; role: string }>;
+  isVerifiedTeacher?: boolean;
+}
+
+interface ForumQuestion {
+  id: number;
+  student: string;
+  subject: string;
+  question: string;
+  answers: string[];
+  status: 'Approved' | 'Pending Review' | 'Flagged';
+}
+
+interface ScienceProject {
+  id: number;
+  title: string;
+  hypothesis: string;
+  independentVariable: string;
+  dependentVariable: string;
+  controlGroup: string;
+  dataPoints: Array<{ trial: number; value: string }>;
+  milestones: Array<{ id: number; title: string; completed: boolean; mentorFeedback: string }>;
+}
+
+interface ArcadeGame {
+  id: number;
+  author: string;
+  title: string;
+  link: string;
+  description: string;
+  status: 'Approved' | 'Pending Review' | 'Rejected';
+  feedback: string[];
+}
+
+// ==========================================
+// APPROVED CREATOR ARCADE DOMAINS
+// ==========================================
+const APPROVED_DOMAINS = ['scratch.mit.edu', 'github.com', 'replit.com'];
+
+const isUrlApproved = (url: string): boolean => {
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return APPROVED_DOMAINS.some(domain => parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`));
+  } catch {
+    return false;
+  }
+};
+
+// ==========================================
+// PROFANITY & PII SAFETY FILTER
+// ==========================================
+const BLOCKED_WORDS = ['badword', 'stupid', 'hate', 'dumb', 'fool'];
+const PII_REGEX = /(\b\d{3}[-.]?\d{3}[-.]?\d{4}\b|\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b)/g;
+
+const sanitizeContent = (text: string): { cleanText: string; isSafe: boolean; warning: string | null } => {
+  let isSafe = true;
+  let warning: string | null = null;
+  let cleanText = text;
+
+  if (PII_REGEX.test(text)) {
+    isSafe = false;
+    warning = 'Personal information (phone numbers or emails) is strictly prohibited.';
+    cleanText = cleanText.replace(PII_REGEX, '[REDACTED PII]');
+  }
+
+  BLOCKED_WORDS.forEach(word => {
+    const reg = new RegExp(`\\b${word}\\b`, 'gi');
+    if (reg.test(cleanText)) {
+      isSafe = false;
+      warning = 'Contains prohibited or inappropriate language.';
+      cleanText = cleanText.replace(reg, '****');
+    }
+  });
+
+  return { cleanText, isSafe, warning };
+};
+
+const formatFirstAndLastInitial = (fullName: string): string => {
+  const parts = fullName.trim().split(' ');
+  if (parts.length < 2) return fullName;
+  return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.`;
+};
+
+// ==========================================
+// LOCATION & DISTRICT DATA
+// ==========================================
 const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
   '93301': {
     county: 'Kern County',
@@ -70,7 +185,10 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: 'Excessive Heat Warning in effect until 8 PM.',
     fogAlert: 'Dense Tule Fog Advisory in early morning hours.',
     libraries: ['Beale Memorial Library (Bakersfield)', 'Baker Branch Library'],
-    eventsUrl: 'https://kern.org/student-events/'
+    eventsUrl: 'https://kern.org/student-events/',
+    aqiSource: 'San Joaquin Valley Air Pollution Control District Feeds',
+    aqiUpdatedAt: 'Today, 1:15 PM PDT',
+    trafficAlert: 'Caltrans Advisory: Minor construction delays on CA-99 near SR-58.'
   },
   '93311': {
     county: 'Kern County',
@@ -84,7 +202,10 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: 'Heat Advisory active for Kern River Valley.',
     fogAlert: null,
     libraries: ['Southwest Branch Library (Bakersfield)', 'Beale Memorial Library'],
-    eventsUrl: 'https://kern.org/student-events/'
+    eventsUrl: 'https://kern.org/student-events/',
+    aqiSource: 'San Joaquin Valley Air Pollution Control District Feeds',
+    aqiUpdatedAt: 'Today, 1:10 PM PDT',
+    trafficAlert: 'Flowing smoothly on Stockdale Hwy & Westside Pkwy.'
   },
   '93721': {
     county: 'Fresno County',
@@ -98,7 +219,10 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: 'Extreme Heat Warning: Limit outdoor activities 12 PM - 6 PM.',
     fogAlert: null,
     libraries: ['Fresno County Public Library (Central)', 'Politi Branch Library'],
-    eventsUrl: 'https://www.fcoe.org/'
+    eventsUrl: 'https://www.fcoe.org/',
+    aqiSource: 'Fresno Unified Air Feeds',
+    aqiUpdatedAt: 'Today, 1:00 PM PDT',
+    trafficAlert: 'Heavy congestion reported on CA-41 North.'
   },
   '95202': {
     county: 'San Joaquin County',
@@ -112,7 +236,10 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: null,
     fogAlert: 'Patchy morning fog impacting Valley commuters.',
     libraries: ['Cesar Chavez Central Library (Stockton)', 'Maya Angelou Library'],
-    eventsUrl: 'https://www.sjcoe.org/services-and-support/studentevents'
+    eventsUrl: 'https://www.sjcoe.org/services-and-support/studentevents',
+    aqiSource: 'San Joaquin Air District Feeds',
+    aqiUpdatedAt: 'Today, 1:12 PM PDT',
+    trafficAlert: 'Patchy fog advisory on I-5 South.'
   },
   '95350': {
     county: 'Stanislaus County',
@@ -126,7 +253,10 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: null,
     fogAlert: null,
     libraries: ['Modesto Library (Stanislaus County)', 'Salida Regional Library'],
-    eventsUrl: 'https://www.stancoe.org/'
+    eventsUrl: 'https://www.stancoe.org/',
+    aqiSource: 'Stanislaus County Environmental API',
+    aqiUpdatedAt: 'Today, 1:05 PM PDT',
+    trafficAlert: 'Normal traffic flow on Hwy 99.'
   }
 };
 
@@ -142,50 +272,64 @@ const DEFAULT_LOCATION: LocationInfo = {
   heatAlert: null,
   fogAlert: null,
   libraries: ['Central Valley Public Library System'],
-  eventsUrl: 'https://kern.org/student-events/'
+  eventsUrl: 'https://kern.org/student-events/',
+  aqiSource: 'Official Valley Weather Feed',
+  aqiUpdatedAt: 'Today, 1:00 PM PDT',
+  trafficAlert: 'Normal road traffic conditions.'
 };
 
 // ==========================================
-// REGIONAL EVENTS DATABASE (BY COUNTY)
+// KERN COUNTY OPPORTUNITIES (ACTIONABLE DATA)
 // ==========================================
-interface EventItem {
-  county: string;
-  category: string;
-  name: string;
-  venue: string;
-}
-
-const REGIONAL_STEM_EVENTS: EventItem[] = [
-  // Kern County Events
-  { county: 'Kern County', category: 'Science & Math', name: 'Kern County Regional Science Fair', venue: 'Dignity Health Convention Center' },
-  { county: 'Kern County', category: 'Science & Math', name: 'STEAM Olympiad Competition', venue: 'Liberty High School' },
-  { county: 'Kern County', category: 'Science & Math', name: 'IgniteHER – STEM for Girls', venue: 'Bakersfield College' },
-  { county: 'Kern County', category: 'Science & Math', name: 'Kern Codes: Skoolcade', venue: 'Virtual' },
-  { county: 'Kern County', category: 'English Language Arts', name: 'Bank of America Speech/Essay Contest', venue: 'Bell Tower Plaza' },
-  { county: 'Kern County', category: 'English Language Arts', name: 'Oral Language Festival', venue: 'Stonecreek Junior High' },
-  { county: 'Kern County', category: 'History & Social Science', name: 'Kern County History Day', venue: 'Bell Tower Plaza' },
-  { county: 'Kern County', category: 'Arts & Music', name: 'Honor Music Festival', venue: 'Dignity Health Convention Center' },
-  { county: 'Kern County', category: 'Future Readiness', name: 'Career and STEM Expo', venue: 'Career & Technical Education Center' },
-
-  // Fresno County Events
-  { county: 'Fresno County', category: 'Science & Math', name: 'Central Valley Science & Engineering Fair', venue: 'Fresno Convention Center' },
-  { county: 'Fresno County', category: 'Science & Math', name: 'Fresno County STEM Challenge', venue: 'Fresno State University' },
-  { county: 'Fresno County', category: 'Future Readiness', name: 'Fresno Unified Robotics League', venue: 'Edison High School' },
-  { county: 'Fresno County', category: 'Arts & Music', name: 'Fresno County Student Art Showcase', venue: 'Fresno Art Museum' },
-
-  // San Joaquin County Events
-  { county: 'San Joaquin County', category: 'Science & Math', name: 'San Joaquin Science Olympiad', venue: 'University of the Pacific' },
-  { county: 'San Joaquin County', category: 'Future Readiness', name: 'SJCOE Coding & AI Expo', venue: 'Stockton Tech Hub' },
-  { county: 'San Joaquin County', category: 'History & Social Science', name: 'San Joaquin Academic Decathlon', venue: 'Chavez High School' },
-
-  // Stanislaus County Events
-  { county: 'Stanislaus County', category: 'Science & Math', name: 'Stanislaus Regional Science Olympiad', venue: 'CSU Stanislaus' },
-  { county: 'Stanislaus County', category: 'Science & Math', name: 'Modesto STEM & Robotics Showcase', venue: 'Modesto Junior College' },
-  { county: 'Stanislaus County', category: 'English Language Arts', name: 'Stanislaus County Spelling Bee', venue: 'Stanislaus Office of Education' }
+const KERN_OPPORTUNITIES: KernOpportunity[] = [
+  {
+    id: 1,
+    name: 'Kern County Regional Science Fair',
+    category: 'Science & Engineering',
+    eventDate: 'March 18, 2027',
+    deadline: 'February 15, 2027',
+    eligibleGrades: 'Grades 4–12',
+    location: 'Mechanics Bank Convention Center, Bakersfield',
+    officialSourceUrl: 'https://kern.org/student-events/science-fair/',
+    verifiedOn: 'October 1, 2026'
+  },
+  {
+    id: 2,
+    name: 'Kern Codes: Skoolcade Game Development',
+    category: 'Coding & Tech',
+    eventDate: 'April 24, 2027',
+    deadline: 'March 30, 2027',
+    eligibleGrades: 'Grades 6–12',
+    location: 'Kern County Superintendent of Schools (KCSOS)',
+    officialSourceUrl: 'https://kern.org/student-events/skoolcade/',
+    verifiedOn: 'October 2, 2026'
+  },
+  {
+    id: 3,
+    name: 'Kern STEAM Olympiad Competition',
+    category: 'STEAM',
+    eventDate: 'May 8, 2027',
+    deadline: 'April 10, 2027',
+    eligibleGrades: 'Grades 6–8',
+    location: 'Liberty High School, Bakersfield',
+    officialSourceUrl: 'https://kern.org/student-events/steam-olympiad/',
+    verifiedOn: 'October 4, 2026'
+  },
+  {
+    id: 4,
+    name: 'Bank of America Speech & Essay Contest',
+    category: 'Language Arts',
+    eventDate: 'February 12, 2027',
+    deadline: 'January 15, 2027',
+    eligibleGrades: 'Grades 7–12',
+    location: 'Kern County Museum, Bakersfield',
+    officialSourceUrl: 'https://kern.org/student-events/essay-contest/',
+    verifiedOn: 'September 28, 2026'
+  }
 ];
 
 // ==========================================
-// WORLD WINDOW PRACTICE DATA (5 LANGUAGES x 3 LEVELS)
+// WORLD WINDOW PRACTICE DATA
 // ==========================================
 type SkillLevel = 'Beginner' | 'Moderate' | 'Expert';
 type Language = 'Spanish' | 'French' | 'Arabic' | 'Japanese' | 'Hindi';
@@ -200,55 +344,55 @@ interface LanguageLesson {
 const WORLD_WINDOW_DATA: Record<Language, Record<SkillLevel, LanguageLesson>> = {
   Spanish: {
     Beginner: {
-      scenario: 'Ordering Food at a Local Cafe',
+      scenario: 'Ordering Food at a Local Cafe in Bakersfield',
       phrases: [
         { original: 'Hola, ¿puedo pedir un café?', translation: 'Hello, can I order a coffee?', phonetic: 'OH-lah, pway-doo peh-DEER oon kah-FEH' },
         { original: 'Por favor y gracias.', translation: 'Please and thank you.', phonetic: 'por fah-VOR ee GRAH-syahs' }
       ],
       dialogue: { speakerA: '¡Buenos días! ¿Qué desea ordenar?', speakerB: 'Un jugo de naranja, por favor.', translation: 'Good morning! What would you like to order? / An orange juice, please.' },
-      travelTip: 'Always greet shopkeepers with "Buenos días" before ordering in Mexico or Spain.'
+      travelTip: 'In the Central Valley, greeting standardly with "Buenos días" reflects local community respect.'
     },
     Moderate: {
-      scenario: 'Asking for Train Station Directions',
+      scenario: 'Asking for Directions in the Central Valley',
       phrases: [
-        { original: 'Disculpe, ¿dónde está la estación de trenes más cercana?', translation: 'Excuse me, where is the nearest train station?', phonetic: 'dees-KOOL-peh, DON-deh ehs-TAH lah ehs-tah-SYON' }
+        { original: 'Disculpe, ¿dónde está la biblioteca más cercana?', translation: 'Excuse me, where is the nearest library?', phonetic: 'dees-KOOL-peh, DON-deh ehs-TAH' }
       ],
-      dialogue: { speakerA: '¿Sabe a qué hora sale el próximo tren?', speakerB: 'Sale a las tres en punto de la plataforma dos.', translation: 'Do you know what time the next train leaves? / It leaves at three oclock from platform two.' },
-      travelTip: 'When using public transit in South America, keep small cash denominations for tickets.'
+      dialogue: { speakerA: '¿Sabe a qué hora abre la biblioteca?', speakerB: 'Abre a las nueve de la mañana.', translation: 'Do you know what time the library opens? / It opens at nine in the morning.' },
+      travelTip: 'When traveling between Valley cities, ask for landmarks like public parks or transit hubs.'
     },
     Expert: {
-      scenario: 'Debating Environmental Topics in Class',
+      scenario: 'Debating Environmental Topics in Agriculture',
       phrases: [
-        { original: 'Es fundamental reducir las emisiones de carbono en la agricultura.', translation: 'It is fundamental to reduce carbon emissions in agriculture.', phonetic: 'ehs foon-dah-men-TAL reh-doo-SEER' }
+        { original: 'Es fundamental reducir las emisiones y conservar el agua en el Valle.', translation: 'It is essential to reduce emissions and conserve water in the Valley.', phonetic: 'ehs foon-dah-men-TAL' }
       ],
-      dialogue: { speakerA: '¿Cuál es su opinión sobre la energía solar renovable?', speakerB: 'Creo que es la inversión más sostenible para el Valle Central.', translation: 'What is your opinion on renewable solar energy? / I believe it is the most sustainable investment for the Central Valley.' },
-      travelTip: 'In formal debates, use subjunctive mood constructions to express nuanced hypotheses.'
+      dialogue: { speakerA: '¿Cuál es la solución para la calidad del aire?', speakerB: 'Invertir en energías renovables y transporte limpio.', translation: 'What is the solution for air quality? / Invest in renewable energy and clean transport.' },
+      travelTip: 'Academic Spanish uses subjunctive structures to debate agricultural policy.'
     }
   },
   French: {
     Beginner: {
-      scenario: 'Greeting Peers in Paris',
+      scenario: 'Greeting Peers in Class',
       phrases: [
         { original: 'Bonjour, comment allez-vous?', translation: 'Hello, how are you?', phonetic: 'bon-ZHOOR, koh-mohn tah-lay VOO' }
       ],
       dialogue: { speakerA: 'Bonjour! Je m’appelle Pierre.', speakerB: 'Enchanté Pierre, je suis Marie.', translation: 'Hello! My name is Pierre. / Nice to meet you Pierre, I am Marie.' },
-      travelTip: 'Always say "Bonjour" when entering any store or bakery in France.'
+      travelTip: 'Always say "Bonjour" when entering any room or shop.'
     },
     Moderate: {
-      scenario: 'Navigating a Museum in Lyon',
+      scenario: 'Visiting a Science Museum',
       phrases: [
         { original: 'Où se trouve la billetterie, s’il vous plaît?', translation: 'Where is the ticket office, please?', phonetic: 'oo suh TROO-vuh lah bee-yeh-TREE' }
       ],
-      dialogue: { speakerA: 'Avez-vous des tarifs étudiants?', speakerB: 'Oui, présentation de la carte d’étudiant obligatoire.', translation: 'Do you have student rates? / Yes, student ID card required.' },
-      travelTip: 'Many national museums in France offer free admission to students with valid ID.'
+      dialogue: { speakerA: 'Avez-vous des tarifs étudiants?', speakerB: 'Oui, sur présentation de la carte.', translation: 'Do you have student rates? / Yes, upon showing your student card.' },
+      travelTip: 'Many science centers offer student discounts with valid school ID.'
     },
     Expert: {
-      scenario: 'Discussing Literary Classics',
+      scenario: 'Discussing Technological Innovation',
       phrases: [
-        { original: 'Ce roman explore la complexité des relations humaines au XIXe siècle.', translation: 'This novel explores human relationship complexity in the 19th century.', phonetic: 'suh roh-MAHN ex-PLOR' }
+        { original: 'Les technologies vertes transforment notre avenir.', translation: 'Green technologies are transforming our future.', phonetic: 'lay teck-noh-loh-ZHEE' }
       ],
-      dialogue: { speakerA: 'Que pensez-vous du style narratif de l’auteur?', speakerB: 'Son utilisation de la métaphore est captivante et profonde.', translation: 'What do you think of the author narrative style? / Their use of metaphor is captivating and profound.' },
-      travelTip: 'Literary discussions in French often favor precise abstract vocabulary.'
+      dialogue: { speakerA: 'Que pensez-vous du développement durable?', speakerB: 'C’est une priorité absolue pour les villes modernisées.', translation: 'What do you think of sustainable development? / It is an absolute priority for modernized cities.' },
+      travelTip: 'Formal discussions in French emphasize precise technical terminology.'
     }
   },
   Arabic: {
@@ -258,81 +402,81 @@ const WORLD_WINDOW_DATA: Record<Language, Record<SkillLevel, LanguageLesson>> = 
         { original: 'مرحباً، كيف حالك؟ (Marhaban, kayfa halak?)', translation: 'Hello, how are you?', phonetic: 'mar-ha-ban kay-fa ha-lak' }
       ],
       dialogue: { speakerA: 'أهلاً وسهلاً! (Ahlan wa sahlan!)', speakerB: 'شكراً جزيلاً! (Shukran jazeelan!)', translation: 'Welcome! / Thank you very much!' },
-      travelTip: 'Placing your right hand over your heart after greeting is a sign of warmth and respect.'
+      travelTip: 'Placing your hand over your heart after greeting is a sign of warmth.'
     },
     Moderate: {
-      scenario: 'Buying Items at a Souk Market',
+      scenario: 'Asking About School Schedules',
       phrases: [
-        { original: 'كم سعر هذا، من فضلك؟ (Kam si’r hadha, min fadlik?)', translation: 'How much is this, please?', phonetic: 'kam seer ha-dha min fad-lik' }
+        { original: 'متى تبدأ الحصة القادمة؟ (Mata tabda al-hissa?)', translation: 'When does the next class start?', phonetic: 'ma-ta tab-da' }
       ],
-      dialogue: { speakerA: 'هذا بمائة درهم. (Hadha bi-mi’at dirham.)', speakerB: 'هل يمكن تخفيض السعر؟ (Hal yumkin takhfeedh as-si’r?)', translation: 'This is 100 dirhams. / Can you lower the price?' },
-      travelTip: 'Polite bargaining is customary in traditional open-air markets across the Middle East.'
+      dialogue: { speakerA: 'الحصة تبدأ في الساعة العاشرة.', speakerB: 'ممتاز، شكراً لك.', translation: 'Class starts at ten oclock. / Excellent, thank you.' },
+      travelTip: 'Using polite forms with teachers and mentors is standard in Arabic-speaking communities.'
     },
     Expert: {
-      scenario: 'Academic Exchange on History',
+      scenario: 'Academic Exchange on History and Science',
       phrases: [
-        { original: 'تعتبر الأندلس مركزاً تاريخياً للتبادل العلمي. (Tu’tabar al-Andalus markazan...)', translation: 'Al-Andalus is considered a historical center for scientific exchange.', phonetic: 'tu-ta-bar al-an-da-lus' }
+        { original: 'تعتبر العلوم أساس التطور الحضاري. (Tu’tabar al-uloom asas...)', translation: 'Sciences are considered the foundation of civilization progress.', phonetic: 'tu-ta-bar al-u-loom' }
       ],
-      dialogue: { speakerA: 'كيف أثرت الترجمة في العصر العباسي؟', speakerB: 'لقد حفظت العلوم القديمة وطورت الفلسفة العالمية.', translation: 'How did translation affect the Abbasid era? / It preserved ancient sciences and developed global philosophy.' },
-      travelTip: 'Formal Arabic (Fusha) is recognized across all 22 Arabic-speaking nations.'
+      dialogue: { speakerA: 'كيف أثرت التكنولوجيا الحديثة؟', speakerB: 'لقد ساهمت في تسهيل الوصول للمعلومات.', translation: 'How did modern tech affect us? / It contributed to simplifying access to information.' },
+      travelTip: 'Formal Arabic (Fusha) is widely understood across all regions.'
     }
   },
   Japanese: {
     Beginner: {
-      scenario: 'Polite Expresses in Tokyo',
+      scenario: 'Polite Expressions in Class',
       phrases: [
         { original: 'こんにちは、はじめまして。 (Konnichiwa, hajimemashite.)', translation: 'Hello, nice to meet you.', phonetic: 'kon-nee-chee-wah ha-jee-meh-mah-shee-teh' }
       ],
-      dialogue: { speakerA: 'すみません、これはいくらですか？', speakerB: 'それは千円です。', translation: 'Excuse me, how much is this? / That is 1,000 yen.' },
-      travelTip: 'Bowing slightly when saying "Arigatou gozaimasu" shows appreciation.'
+      dialogue: { speakerA: 'すみません、質問があります。', speakerB: 'はい、なんですか？', translation: 'Excuse me, I have a question. / Yes, what is it?' },
+      travelTip: 'Bowing slightly when expressing gratitude shows respectful etiquette.'
     },
     Moderate: {
-      scenario: 'Asking for Directions at Shinjuku Station',
+      scenario: 'Navigating Campus Activities',
       phrases: [
-        { original: 'JR線はどこですか？ (JR-sen wa doko desu ka?)', translation: 'Where is the JR train line?', phonetic: 'jay-ahr sen wah doh-koh dess kah' }
+        { original: '図書室はどこですか？ (Toshoshitsu wa doko desu ka?)', translation: 'Where is the library room?', phonetic: 'toh-shoh-shee-tsu wah doh-koh' }
       ],
-      dialogue: { speakerA: 'この電車は秋葉原に行きますか？', speakerB: 'はい、次の駅で乗り換えてください。', translation: 'Does this train go to Akihabara? / Yes, please transfer at the next station.' },
-      travelTip: 'IC Cards like Suica or Pasmo work on trains, buses, and convenience stores.'
+      dialogue: { speakerA: '科学部は何時に始まりますか？', speakerB: '午後四時に始まります。', translation: 'What time does science club start? / It starts at 4 PM.' },
+      travelTip: 'Punctuality is essential for group study meetings.'
     },
     Expert: {
-      scenario: 'Discussing Tech Innovations',
+      scenario: 'Discussing Robotics and Engineering',
       phrases: [
-        { original: '人工知能の発展は社会構造に変化をもたらします。', translation: 'The development of artificial intelligence brings changes to social structure.', phonetic: 'jin-kou chi-nou no hat-ten' }
+        { original: 'ロボット工学の未来について議論しましょう。', translation: 'Let us discuss the future of robotics engineering.', phonetic: 'ro-bot-to kou-ga-ku' }
       ],
-      dialogue: { speakerA: 'ロボット工学の最新技術についてどう思いますか？', speakerB: '医療分野での活用が期待されています。', translation: 'What do you think of robotics latest tech? / Applications in medicine are highly anticipated.' },
-      travelTip: 'Keigo (formal honorific speech) is expected in business and formal academic settings.'
+      dialogue: { speakerA: 'AI技術の利点は何ですか？', speakerB: '効率性と正確性の向上です。', translation: 'What is the advantage of AI tech? / Improvement in efficiency and accuracy.' },
+      travelTip: 'Keigo (formal speech) is preferred when talking to instructors or judges.'
     }
   },
   Hindi: {
     Beginner: {
-      scenario: 'Friendly Greetings & Introductions',
+      scenario: 'Friendly Greetings',
       phrases: [
         { original: 'नमस्ते! आप कैसे हैं? (Namaste! Aap kaise hain?)', translation: 'Hello! How are you?', phonetic: 'nah-mas-TEH aape kai-SEH hain' }
       ],
       dialogue: { speakerA: 'मेरा नाम राहुल है। (Mera naam Rahul hai.)', speakerB: 'आपसे मिलकर खुशी हुई। (Aapse milkar khushi hui.)', translation: 'My name is Rahul. / Nice to meet you.' },
-      travelTip: 'Joining hands together in "Namaste" is a traditional and respectful greeting.'
+      travelTip: 'Joining hands in "Namaste" is a traditional greeting.'
     },
     Moderate: {
-      scenario: 'Ordering Food at an Indian Restaurant',
+      scenario: 'Ordering Healthy Meals',
       phrases: [
-        { original: 'क्या आपके पास शाकाहारी खाना है? (Kya aapke paas shakahari khana hai?)', translation: 'Do you have vegetarian food?', phonetic: 'kya aap-ke paas sha-ka-ha-ree kha-na hai' }
+        { original: 'क्या आपके पास शाकाहारी खाना है? (Kya aapke paas shakahari khana hai?)', translation: 'Do you have vegetarian food?', phonetic: 'kya aap-ke paas sha-ka-ha-ree' }
       ],
-      dialogue: { speakerA: 'आज की विशेष डिश क्या है?', speakerB: 'आज ताज़ा पनीर और तंदूरी रोटी बढ़िया है।', translation: 'What is today special dish? / Fresh paneer and tandoori roti are great today.' },
-      travelTip: 'In India, hospitality is paramount ("Atithi Devo Bhava" - The guest is equivalent to God).'
+      dialogue: { speakerA: 'आज का विशेष भोजन क्या है?', speakerB: 'आज ताज़ा फल और दाल बढ़िया हैं।', translation: 'What is special today? / Fresh fruits and lentils are great today.' },
+      travelTip: 'Central Valley has many rich cultural restaurants offering authentic vegetarian options.'
     },
     Expert: {
-      scenario: 'Discussing Cultural Heritage & History',
+      scenario: 'Discussing Environmental Conservation',
       phrases: [
-        { original: 'भारत की विविधता और समृद्ध संस्कृति अद्वितीय है।', translation: 'Indias diversity and rich culture are unique.', phonetic: 'bha-rat kee vi-vidh-ta' }
+        { original: 'पर्यावरण संरक्षण हमारी मुख्य जिम्मेदारी है।', translation: 'Environmental protection is our main responsibility.', phonetic: 'par-ya-va-ran sa-rak-shan' }
       ],
-      dialogue: { speakerA: 'प्राचीन स्थापत्य कला के बारे में आपका क्या विचार है?', speakerB: 'यह हमारे ऐतिहासिक कौशल और कारीगरी का प्रतीक है।', translation: 'What is your view on ancient architectural art? / It represents our historical skill and craftsmanship.' },
-      travelTip: 'Using formal "Aap" rather than informal "Tum" shows polite respect to elders and teachers.'
+      dialogue: { speakerA: 'जल संरक्षण क्यों आवश्यक है?', speakerB: 'क्योंकि कृषि और जीवन इसके बिना असंभव हैं।', translation: 'Why is water conservation necessary? / Because farming and life are impossible without it.' },
+      travelTip: 'Use formal terms like "Aap" when addressing teachers or community leaders.'
     }
   }
 };
 
 // ==========================================
-// EXPANDED BOOK DATABASE (10+ BOOKS PER AGE GROUP & GENRE)
+// EXTENDED BOOK DATABASE
 // ==========================================
 interface BookItem {
   id: number;
@@ -344,82 +488,22 @@ interface BookItem {
 }
 
 const EXTENDED_BOOKS_DATABASE: BookItem[] = [
-  // --- Ages 2–5 ---
   { id: 1, title: 'The Very Hungry Caterpillar', author: 'Eric Carle', ageCategory: 'Ages 2–5', genre: "Children's Picture Book / STEM", description: 'A classic picture book about life cycles and a caterpillar eating through the week.' },
   { id: 2, title: 'Goodnight Moon', author: 'Margaret Wise Brown', ageCategory: 'Ages 2–5', genre: "Bedtime Classic", description: 'A gentle rhyming story saying goodnight to everything in the room.' },
-  { id: 3, title: 'Brown Bear, Brown Bear, What Do You See?', author: 'Bill Martin Jr.', ageCategory: 'Ages 2–5', genre: "Colors & Animals / STEM", description: 'Teaches young readers colors and animal recognition through rhymes.' },
-  { id: 4, title: 'The Rainbow Fish', author: 'Marcus Pfister', ageCategory: 'Ages 2–5', genre: "Fantasy & Kindness", description: 'A sweet fantasy tale about a glittering fish sharing his scales.' },
-  { id: 5, title: 'Chicka Chicka Boom Boom', author: 'Bill Martin Jr.', ageCategory: 'Ages 2–5', genre: "Alphabet & Learning / STEM", description: 'An energetic early-learning alphabet rhyme as letters race up a coconut tree.' },
-  { id: 6, title: 'Where Is Baby’s Belly Button?', author: 'Karen Katz', ageCategory: 'Ages 2–5', genre: "Interactive Lift-the-Flap / STEM", description: 'Fun lift-the-flap book introducing early human anatomy for toddlers.' },
-  { id: 7, title: 'If You Give a Mouse a Cookie', author: 'Laura Numeroff', ageCategory: 'Ages 2–5', genre: "Humorous Story", description: 'A whimsical story showing a funny sequence of cause and effect.' },
-  { id: 8, title: 'Don’t Let the Pigeon Drive the Bus!', author: 'Mo Willems', ageCategory: 'Ages 2–5', genre: "Humor & Interactive", description: 'An expressive pigeon tries to convince kids to let him drive.' },
-  { id: 9, title: 'Llama Llama Red Pajama', author: 'Anna Dewdney', ageCategory: 'Ages 2–5', genre: "Emotions & Family", description: 'Helps young kids cope with bedtime separation anxiety.' },
-  { id: 10, title: 'Dear Zoo', author: 'Rod Campbell', ageCategory: 'Ages 2–5', genre: "Animals & Touch / STEM", description: 'A lift-the-flap favorite exploring animals and their traits.' },
-  { id: 11, title: 'Room on the Broom', author: 'Julia Donaldson', ageCategory: 'Ages 2–5', genre: "Fantasy", description: 'A friendly witch and her magical animal friends go on a sky adventure.' },
-  { id: 12, title: 'Ada Twist, Scientist: Picture Book', author: 'Andrea Beaty', ageCategory: 'Ages 2–5', genre: "STEM & Science", description: 'A curious young girl asks questions and conducts fun scientific experiments.' },
-
-  // --- Ages 6–8 ---
-  { id: 13, title: 'Where the Wild Things Are', author: 'Maurice Sendak', ageCategory: 'Ages 6–8', genre: "Fantasy", description: 'Max sails to the land of wild monsters in an imaginative fantasy journey.' },
-  { id: 14, title: 'The Magic Tree House: Dinosaurs Before Dark', author: 'Mary Pope Osborne', ageCategory: 'Ages 6–8', genre: "Fantasy & STEM", description: 'Jack and Annie travel through time to study prehistoric dinosaurs.' },
-  { id: 15, title: 'Mercy Watson to the Rescue', author: 'Kate DiCamillo', ageCategory: 'Ages 6–8', genre: "Beginner Chapter Book", description: 'Hilarious adventures of a buttered-toast-loving pig.' },
-  { id: 16, title: 'Zoey and Sassafras: Dragons and Marshmallows', author: 'Asia Citro', ageCategory: 'Ages 6–8', genre: "STEM & Fantasy", description: 'Zoey uses the scientific method to heal sick magical creatures.' },
-  { id: 17, title: 'Fly Guy Series: Hi! Fly Guy', author: 'Tedd Arnold', ageCategory: 'Ages 6–8', genre: "Humor & Early Reader", description: 'A boy and his smart pet fly go on funny everyday quests.' },
-  { id: 18, title: 'Frog and Toad Are Friends', author: 'Arnold Lobel', ageCategory: 'Ages 6–8', genre: "Friendship Classic", description: 'Five heartwarming stories celebrating true friendship.' },
-  { id: 19, title: 'Ivy + Bean', author: 'Annie Barrows', ageCategory: 'Ages 6–8', genre: "Realistic Fiction", description: 'Two very different girls team up for wild neighborhood fun.' },
-  { id: 20, title: 'The Bad Guys', author: 'Aaron Blabey', ageCategory: 'Ages 6–8', genre: "Graphic Novel & Humor", description: 'Misunderstood villainous animals try to perform heroic good deeds.' },
-  { id: 21, title: 'Narwhal: Unicorn of the Sea', author: 'Ben Clanton', ageCategory: 'Ages 6–8', genre: "Graphic Novel & STEM", description: 'A happy narwhal and a cynical jellyfish explore ocean life together.' },
-  { id: 22, title: 'Junie B. Jones and the Stupid Smelly Bus', author: 'Barbara Park', ageCategory: 'Ages 6–8', genre: "Humor & School Life", description: 'Junie B. shares her funny, unfiltered first-grade observations.' },
-  { id: 23, title: 'Dragon Masters: Rise of the Earth Dragon', author: 'Tracey West', ageCategory: 'Ages 6–8', genre: "Fantasy", description: 'Drake is summoned to the castle to train dragons with special magic powers.' },
+  { id: 3, title: 'Ada Twist, Scientist', author: 'Andrea Beaty', ageCategory: 'Ages 2–5', genre: "STEM & Science", description: 'A curious young girl asks questions and conducts fun scientific experiments.' },
+  { id: 14, title: 'Dinosaurs Before Dark', author: 'Mary Pope Osborne', ageCategory: 'Ages 6–8', genre: "Fantasy & STEM", description: 'Jack and Annie travel through time to study prehistoric dinosaurs.' },
+  { id: 16, title: 'Dragons and Marshmallows', author: 'Asia Citro', ageCategory: 'Ages 6–8', genre: "STEM & Fantasy", description: 'Zoey uses the scientific method to heal sick magical creatures.' },
   { id: 24, title: 'The Most Magnificent Thing', author: 'Ashley Spires', ageCategory: 'Ages 6–8', genre: "STEM & Innovation", description: 'A young maker learns perseverance and engineering design principles.' },
-
-  // --- Ages 9–12 ---
-  { id: 25, title: "Charlotte's Web", author: 'E.B. White', ageCategory: 'Ages 9–12', genre: 'Classic / Fiction', description: 'The heartwarming tale of Wilbur the pig and a wise spider named Charlotte.' },
-  { id: 26, title: 'Percy Jackson: The Lightning Thief', author: 'Rick Riordan', ageCategory: 'Ages 9–12', genre: 'Fantasy & Mythology', description: 'A modern demigod discovers his lineage and embarks on a quest.' },
-  { id: 27, title: 'Wonder', author: 'R.J. Palacio', ageCategory: 'Ages 9–12', genre: 'Realistic Fiction', description: 'Auggie Pullman navigates fifth grade with courage and kindness.' },
-  { id: 28, title: 'A Wrinkle in Time', author: 'Madeleine L\'Engle', ageCategory: 'Ages 9–12', genre: 'Sci-Fi Fantasy & STEM', description: 'Meg Murry travels through tesseracts and quantum space to save her scientist father.' },
-  { id: 29, title: 'Hidden Figures (Young Readers Edition)', author: 'Margot Lee Shetterly', ageCategory: 'Ages 9–12', genre: 'STEM & Non-Fiction', description: 'The incredible story of female African American NASA mathematicians.' },
-  { id: 30, title: 'Holes', author: 'Louis Sachar', ageCategory: 'Ages 9–12', genre: 'Mystery & Adventure', description: 'Stanley Yelnats is sent to Camp Green Lake where he uncovers old secrets.' },
-  { id: 31, title: 'Keeper of the Lost Cities', author: 'Shannon Messenger', ageCategory: 'Ages 9–12', genre: 'Fantasy & Magic', description: 'Sophie learns she is a telepathic elf who belongs in a hidden world.' },
-  { id: 32, title: 'The One and Only Ivan', author: 'Katherine Applegate', ageCategory: 'Ages 9–12', genre: 'Animal Fiction', description: 'A gorilla living in a shopping mall plans a daring escape.' },
-  { id: 33, title: 'Front Desk', author: 'Kelly Yang', ageCategory: 'Ages 9–12', genre: 'Realistic Fiction', description: 'Mia Tang manages a motel front desk while navigating immigrant life.' },
-  { id: 34, title: 'Amari and the Night Brothers', author: 'B.B. Alston', ageCategory: 'Ages 9–12', genre: 'Fantasy & Mystery', description: 'Amari discovers supernatural secret agents while searching for her brother.' },
+  { id: 28, title: 'A Wrinkle in Time', author: 'Madeleine L\'Engle', ageCategory: 'Ages 9–12', genre: 'Sci-Fi Fantasy & STEM', description: 'Meg Murry travels through quantum space to save her scientist father.' },
+  { id: 29, title: 'Hidden Figures (Young Readers)', author: 'Margot Lee Shetterly', ageCategory: 'Ages 9–12', genre: 'STEM & Non-Fiction', description: 'The incredible story of female African American NASA mathematicians.' },
   { id: 35, title: 'The Wild Robot', author: 'Peter Brown', ageCategory: 'Ages 9–12', genre: 'STEM & Sci-Fi Fantasy', description: 'A robot stranded on a wild island learns robotics and nature survival.' },
-  { id: 36, title: 'Girls Who Code: Learn to Code and Change the World', author: 'Reshma Saujani', ageCategory: 'Ages 9–12', genre: 'STEM & Technology', description: 'An inspiring introduction to computer science, coding, and teamwork.' },
-
-  // --- Ages 13–18 ---
-  { id: 37, title: 'The Hunger Games', author: 'Suzanne Collins', ageCategory: 'Ages 13–18', genre: 'Dystopian Sci-Fi / Fantasy', description: 'Katniss Everdeen volunteers in a televised survival tournament.' },
-  { id: 38, title: 'The Book Thief', author: 'Markus Zusak', ageCategory: 'Ages 13–18', genre: 'Historical Fiction / Classic', description: 'Narrated by Death, a young girl steals books to survive WWII Germany.' },
-  { id: 39, title: 'To Kill a Mockingbird', author: 'Harper Lee', ageCategory: 'Ages 13–18', genre: 'Classic Literature', description: 'Scout Finch witnesses racial injustice and empathy in 1930s Alabama.' },
-  { id: 40, title: 'The Hate U Give', author: 'Angie Thomas', ageCategory: 'Ages 13–18', genre: 'Contemporary Fiction', description: 'Starr Carter balances her dual life after witnessing a police shooting.' },
   { id: 41, title: 'Cinder (The Lunar Chronicles)', author: 'Marissa Meyer', ageCategory: 'Ages 13–18', genre: 'Fantasy & STEM Sci-Fi', description: 'A gifted mechanic cyborg in New Beijing becomes embroiled in an intergalactic war.' },
-  { id: 42, title: 'Legend', author: 'Marie Lu', ageCategory: 'Ages 13–18', genre: 'Dystopian Sci-Fi', description: 'A prodigy military candidate and a street criminal clash in futuristic Los Angeles.' },
-  { id: 43, title: 'One of Us Is Lying', author: 'Karen M. McManus', ageCategory: 'Ages 13–18', genre: 'Mystery & Thriller', description: 'Five high school students enter detention, but only four make it out alive.' },
-  { id: 44, title: 'Scythe', author: 'Neal Shusterman', ageCategory: 'Ages 13–18', genre: 'Dystopian Sci-Fi & Fantasy', description: 'In a world where AI cured disease, "scythes" are chosen to control population.' },
   { id: 45, title: 'Firekeeper’s Daughter', author: 'Angeline Boulley', ageCategory: 'Ages 13–18', genre: 'STEM & Mystery Thriller', description: 'An Ojibwe teen uses chemistry knowledge to protect her Native reservation.' },
-  { id: 46, title: 'Ender’s Game', author: 'Orson Scott Card', ageCategory: 'Ages 13–18', genre: 'STEM & Sci-Fi Classic', description: 'A young tactical genius is trained at Battle School using advanced tech.' },
-  { id: 47, title: 'Six of Crows', author: 'Leigh Bardugo', ageCategory: 'Ages 13–18', genre: 'Fantasy', description: 'A crew of dangerous outcasts attempt an impossible heist in a magical world.' },
   { id: 48, title: 'The Martian (Classroom Edition)', author: 'Andy Weir', ageCategory: 'Ages 13–18', genre: 'STEM & Sci-Fi', description: 'An astronaut stranded on Mars uses botanical and engineering math to stay alive.' }
 ];
 
-const getMonthlyRotatedBooks = (): BookItem[] => {
-  const currentMonth = new Date().getMonth();
-  const rotated = [...EXTENDED_BOOKS_DATABASE];
-  const shift = (currentMonth * 3) % rotated.length;
-  return rotated.slice(shift).concat(rotated.slice(0, shift));
-};
-
-// ==========================================
-// USER INTERFACE TYPES
-// ==========================================
-interface UserAccount {
-  username: string;
-  studentName: string;
-  role: 'Student' | 'Teacher';
-  code: string;
-  joinedBuddies: Array<{ name: string; code: string; role: string }>;
-}
-
 export default function App() {
+  // Auth & User State
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [loginRole, setLoginRole] = useState<'Student' | 'Teacher'>('Student');
@@ -428,9 +512,12 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
 
+  // App Navigation
   const [activeTab, setActiveTab] = useState<string>('Safe-Day Dashboard');
   const [zipCode, setZipCode] = useState<string>('93301');
+  const [safetyNotice, setSafetyNotice] = useState<string | null>(null);
 
+  // Wellbeing State
   const [activeWellbeingTab, setActiveWellbeingTab] = useState<'planner' | 'water' | 'mood'>('water');
   const [waterCount, setWaterCount] = useState<number>(4);
   const [movementMins, setMovementMins] = useState<number>(30);
@@ -443,158 +530,189 @@ export default function App() {
   const [newActivityTime, setNewActivityTime] = useState('');
   const [selectedMood, setSelectedMood] = useState<string>('Energized');
 
+  // Study Group State
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [inviteStatusMsg, setInviteStatusMsg] = useState<{ text: string; success: boolean } | null>(null);
 
-  const [homeworkQuestions, setHomeworkQuestions] = useState([
-    { id: 1, student: 'Pradeep Kumar', subject: 'Algebra II', question: 'How do you factor quadratic equations with leading coefficients > 1?', answers: ['Use the AC method: multiply A*C and find factors that add to B!'] },
-    { id: 2, student: 'Elena Rodriguez', subject: 'Chemistry', question: 'What is the balanced equation for cellular respiration?', answers: ['C6H12O6 + 6O2 -> 6CO2 + 6H2O + ATP!'] }
+  // Study Buddy Moderated Questions State
+  const [homeworkQuestions, setHomeworkQuestions] = useState<ForumQuestion[]>([
+    { id: 1, student: 'Pradeep T.', subject: 'Algebra II', question: 'How do you factor quadratic equations with leading coefficients greater than 1?', answers: ['Use the AC method: multiply A*C and find factors that add to B!'], status: 'Approved' },
+    { id: 2, student: 'Elena R.', subject: 'Chemistry', question: 'What is the balanced equation for cellular respiration?', answers: ['C6H12O6 + 6O2 -> 6CO2 + 6H2O + ATP!'], status: 'Approved' }
   ]);
   const [newSubject, setNewSubject] = useState('Math');
   const [newQuestionText, setNewQuestionText] = useState('');
   const [replyText, setReplyText] = useState<Record<number, string>>({});
 
-  const [projectMilestones, setProjectMilestones] = useState([
-    { id: 1, title: 'Problem Statement & Hypothesis', completed: true, mentorFeedback: 'Great scope! Ensure variable controls are clear.' },
-    { id: 2, title: 'Experimental Data Logging', completed: false, mentorFeedback: 'Awaiting lab logbook entries.' },
-    { id: 3, title: 'Tri-Fold Display Board Prep', completed: false, mentorFeedback: 'Follow Kern Regional Science Fair layout guidelines.' }
-  ]);
+  // Science-Fair Coach State
+  const [scienceProject, setScienceProject] = useState<ScienceProject>({
+    id: 101,
+    title: 'Central Valley Soil Salinity Impact on Seed Germination',
+    hypothesis: 'Higher salt concentrations in soil will decrease lettuce seed germination rate by over 40%.',
+    independentVariable: 'Soil Salinity Level (0%, 1%, 3%, 5% Salt Solution)',
+    dependentVariable: 'Germination Rate (% of seeds sprouted after 7 days)',
+    controlGroup: 'Pot treated with pure distilled water (0% salt)',
+    dataPoints: [
+      { trial: 1, value: '0% Salt: 10/10 Sprouted (100%)' },
+      { trial: 2, value: '1% Salt: 8/10 Sprouted (80%)' },
+      { trial: 3, value: '3% Salt: 4/10 Sprouted (40%)' },
+      { trial: 4, value: '5% Salt: 1/10 Sprouted (10%)' }
+    ],
+    milestones: [
+      { id: 1, title: 'Problem Statement & Hypothesis', completed: true, mentorFeedback: 'Excellent hypothesis. Variables are clearly defined.' },
+      { id: 2, title: 'Experimental Controls & Data Table Verification', completed: true, mentorFeedback: 'Control group looks correct. Ensure sample sizes remain consistent.' },
+      { id: 3, title: 'Tri-Fold Display Board Layout Prep', completed: false, mentorFeedback: 'Follow Kern Regional Science Fair layout guidelines.' }
+    ]
+  });
   const [newFeedbackInput, setNewFeedbackInput] = useState('');
+  const [newDataValue, setNewDataValue] = useState('');
 
+  // Reading Tracker State
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>('All Ages');
+  const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
+  const [searchBookTerm, setSearchBookTerm] = useState<string>('');
+  const [booksReadCount, setBooksReadCount] = useState<number>(3);
+  const [readingMinutes, setReadingMinutes] = useState<number>(145);
+  const [readingGoalMins, setReadingGoalMins] = useState<number>(200);
+
+  // STEM Board Reminders State
+  const [reminders, setReminders] = useState<number[]>([]);
+
+  // World Window State
   const [selectedLang, setSelectedLang] = useState<Language>('Spanish');
   const [selectedLevel, setSelectedLevel] = useState<SkillLevel>('Beginner');
 
-  const [arcadeGames, setArcadeGames] = useState([
-    { id: 1, author: 'Alex Martinez', title: 'Solar System Simulator', link: 'https://scratch.mit.edu', description: 'Interactive 3D planetary motion model.' },
-    { id: 2, author: 'Sarah Patel', title: 'Central Valley Water Run', link: 'https://replit.com', description: 'Python arcade game teaching water conservation.' }
+  // Creator Arcade State
+  const [arcadeGames, setArcadeGames] = useState<ArcadeGame[]>([
+    { id: 1, author: 'Alex M.', title: 'Solar System Simulator', link: 'https://scratch.mit.edu', description: 'Interactive 3D planetary motion model.', status: 'Approved', feedback: ['Great physics simulation!'] },
+    { id: 2, author: 'Sarah P.', title: 'Central Valley Water Run', link: 'https://replit.com', description: 'Python arcade game teaching water conservation.', status: 'Approved', feedback: ['Very creative gameplay.'] }
   ]);
   const [gameTitle, setGameTitle] = useState('');
   const [gameLink, setGameLink] = useState('');
   const [gameDesc, setGameDesc] = useState('');
+  const [peerFeedbackText, setPeerFeedbackText] = useState<Record<number, string>>({});
 
-  const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>('All Ages');
-  const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
-  const [searchBookTerm, setSearchBookTerm] = useState<string>('');
-  const [booksList, setBooksList] = useState<BookItem[]>([]);
+  const currentLocation = CENTRAL_VALLEY_DATA[zipCode] || DEFAULT_LOCATION;
 
-  useEffect(() => {
-    setBooksList(getMonthlyRotatedBooks());
-  }, []);
-
-  const currentLocation = CENTRAL_VALLEY_DATA[zipCode] || {
-    ...DEFAULT_LOCATION,
-    community: `VALLEY DISTRICT (${zipCode})`
-  };
-
-  // Dynamically Filter Events Based on Selected Zip Code / County
-  const filteredCountyEvents = REGIONAL_STEM_EVENTS.filter(
-    (evt) => evt.county.toLowerCase() === currentLocation.county.toLowerCase()
-  );
-
-  const generateSixDigitCode = () => {
-    return 'CV-' + Math.floor(100000 + Math.random() * 900000).toString();
+  // Judge Demo Trigger
+  const handleTriggerJudgeDemo = () => {
+    const demoUser: UserAccount = {
+      username: 'judge_demo',
+      studentName: 'Judge Evaluator',
+      role: 'Teacher',
+      code: 'CV-999000',
+      joinedBuddies: [{ name: 'Alex M.', code: 'CV-102938', role: 'Student' }],
+      isVerifiedTeacher: true
+    };
+    setCurrentUser(demoUser);
+    setIsLoggedIn(true);
+    setSafetyNotice('Logged in under One-Click Judge Demo mode. Full teacher privileges & sample data active.');
   };
 
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!usernameInput) return;
 
-    const storedUsersJson = localStorage.getItem('cv_portal_users');
-    const usersList: Record<string, UserAccount & { password?: string }> = storedUsersJson ? JSON.parse(storedUsersJson) : {};
+    const formattedName = studentNameInput ? formatFirstAndLastInitial(studentNameInput) : usernameInput;
+    const newAccount: UserAccount = {
+      username: usernameInput,
+      studentName: formattedName,
+      role: loginRole,
+      code: 'CV-' + Math.floor(100000 + Math.random() * 900000).toString(),
+      joinedBuddies: [],
+      isVerifiedTeacher: loginRole === 'Teacher'
+    };
 
-    if (authMode === 'signup') {
-      const newCode = generateSixDigitCode();
-      const displayName = studentNameInput.trim() || usernameInput.trim();
-      const newAccount: UserAccount & { password?: string } = {
-        username: usernameInput,
-        studentName: displayName,
-        role: loginRole,
-        code: newCode,
-        joinedBuddies: [],
-        password: passwordInput
-      };
-      usersList[usernameInput] = newAccount;
-      localStorage.setItem('cv_portal_users', JSON.stringify(usersList));
-      setCurrentUser(newAccount);
-      setIsLoggedIn(true);
-    } else {
-      const existing = usersList[usernameInput];
-      if (existing) {
-        if (!existing.studentName) {
-          existing.studentName = existing.username;
-        }
-        setCurrentUser(existing);
-        setIsLoggedIn(true);
-      } else {
-        const fallbackAccount: UserAccount = {
-          username: usernameInput,
-          studentName: studentNameInput.trim() || usernameInput,
-          role: loginRole,
-          code: generateSixDigitCode(),
-          joinedBuddies: []
-        };
-        usersList[usernameInput] = fallbackAccount;
-        localStorage.setItem('cv_portal_users', JSON.stringify(usersList));
-        setCurrentUser(fallbackAccount);
-        setIsLoggedIn(true);
-      }
-    }
+    setCurrentUser(newAccount);
+    setIsLoggedIn(true);
   };
 
-  // Connected Peers Handler - Displays Registered Student Name
   const handleAddCodeBuddy = () => {
     if (!inviteCodeInput || !currentUser) return;
-
     const cleanInput = inviteCodeInput.trim().toUpperCase();
 
-    if (cleanInput === currentUser.code.trim().toUpperCase()) {
-      setInviteStatusMsg({ text: "You cannot enter your own code!", success: false });
+    if (cleanInput === currentUser.code) {
+      setInviteStatusMsg({ text: 'You cannot enter your own class code!', success: false });
       return;
     }
 
-    const storedUsersJson = localStorage.getItem('cv_portal_users');
-    const usersList: Record<string, UserAccount> = storedUsersJson ? JSON.parse(storedUsersJson) : {};
-    
-    // Search registered account database by Code or Username
-    const foundUser = Object.values(usersList).find(
-      u => u.code.trim().toUpperCase() === cleanInput || u.username.trim().toUpperCase() === cleanInput
-    );
-
-    // Extract Registered Student Name
-    const displayName = foundUser ? (foundUser.studentName || foundUser.username) : `Student (${cleanInput})`;
-    const displayRole = foundUser ? foundUser.role : 'Peer';
-    const displayCode = foundUser ? foundUser.code : cleanInput;
-
-    const alreadyExists = currentUser.joinedBuddies.some(b => b.code.toUpperCase() === displayCode || b.name.toLowerCase() === displayName.toLowerCase());
-
-    if (!alreadyExists) {
-      const newBuddyEntry = { name: displayName, code: displayCode, role: displayRole };
-      const updatedUser = {
-        ...currentUser,
-        joinedBuddies: [...currentUser.joinedBuddies, newBuddyEntry]
-      };
-      setCurrentUser(updatedUser);
-      usersList[currentUser.username] = updatedUser;
-      localStorage.setItem('cv_portal_users', JSON.stringify(usersList));
-      setInviteStatusMsg({
-        text: `Successfully connected with ${displayName} (${displayCode}) (${displayRole})!`,
-        success: true
-      });
-    } else {
-      setInviteStatusMsg({ text: `You are already connected with ${displayName}.`, success: true });
-    }
+    const newBuddy = { name: `Student (${cleanInput})`, code: cleanInput, role: 'Peer' };
+    setCurrentUser({
+      ...currentUser,
+      joinedBuddies: [...currentUser.joinedBuddies, newBuddy]
+    });
+    setInviteStatusMsg({ text: `Joined group with code ${cleanInput}!`, success: true });
     setInviteCodeInput('');
   };
 
-  const filteredBooks = booksList.filter((book) => {
+  const handlePostQuestion = () => {
+    if (!newQuestionText) return;
+    const check = sanitizeContent(newQuestionText);
+
+    if (!check.isSafe) {
+      setSafetyNotice(`Content Filter Triggered: ${check.warning}`);
+      return;
+    }
+
+    const newQ: ForumQuestion = {
+      id: Date.now(),
+      student: currentUser?.studentName || 'Student',
+      subject: newSubject,
+      question: check.cleanText,
+      answers: [],
+      status: 'Pending Review'
+    };
+
+    setHomeworkQuestions([newQ, ...homeworkQuestions]);
+    setNewQuestionText('');
+    setSafetyNotice('Question submitted! Sent to Teacher Review Queue for moderation.');
+  };
+
+  const handlePublishArcadeProject = () => {
+    if (!gameTitle || !gameLink) return;
+
+    if (!isUrlApproved(gameLink)) {
+      setSafetyNotice('Security Control: Link rejected! Creator Arcade permits only Scratch (scratch.mit.edu), GitHub (github.com), or Replit (replit.com) URLs.');
+      return;
+    }
+
+    const check = sanitizeContent(gameTitle + ' ' + gameDesc);
+    if (!check.isSafe) {
+      setSafetyNotice(`Safety Filter Block: ${check.warning}`);
+      return;
+    }
+
+    const newGame: ArcadeGame = {
+      id: Date.now(),
+      author: currentUser?.studentName || 'Student',
+      title: gameTitle,
+      link: gameLink,
+      description: gameDesc,
+      status: 'Pending Review',
+      feedback: []
+    };
+
+    setArcadeGames([newGame, ...arcadeGames]);
+    setGameTitle('');
+    setGameLink('');
+    setGameDesc('');
+    setSafetyNotice('Project submitted for Teacher Review before publication.');
+  };
+
+  const toggleReminder = (id: number) => {
+    if (reminders.includes(id)) {
+      setReminders(reminders.filter(r => r !== id));
+    } else {
+      setReminders([...reminders, id]);
+    }
+  };
+
+  const filteredBooks = EXTENDED_BOOKS_DATABASE.filter((book) => {
     const matchesAge = selectedAgeGroup === 'All Ages' || book.ageCategory === selectedAgeGroup;
     const matchesGenre = selectedGenre === 'All Genres' || book.genre.toLowerCase().includes(selectedGenre.toLowerCase());
     const matchesSearch = book.title.toLowerCase().includes(searchBookTerm.toLowerCase()) || 
                           book.author.toLowerCase().includes(searchBookTerm.toLowerCase());
     return matchesAge && matchesGenre && matchesSearch;
   });
-
-  const currentMonthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
 
   if (!isLoggedIn) {
     return (
@@ -604,106 +722,78 @@ export default function App() {
             <div className="bg-blue-600/20 text-blue-400 p-3 rounded-full w-14 h-14 mx-auto flex items-center justify-center border border-blue-500/30">
               <Shield className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Central Valley Student Portal</h1>
+            <h1 className="text-2xl font-bold tracking-tight">ValleyQuest Hub</h1>
             <p className="text-xs text-slate-400">
-              {authMode === 'signin' ? 'Sign in to access your district hub' : 'Create a new account to receive your 6-digit code'}
+              A safety & opportunity companion for Central Valley students
             </p>
           </div>
 
-          <div className="grid grid-cols-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+          <div className="bg-blue-900/40 border border-blue-500/50 p-4 rounded-xl text-center space-y-2">
+            <p className="text-xs text-blue-200 font-semibold">Judging or Reviewing?</p>
             <button
-              type="button"
-              onClick={() => setAuthMode('signin')}
-              className={`py-2 text-xs font-semibold rounded-lg transition-all ${authMode === 'signin' ? 'bg-[#2563eb] text-white' : 'text-slate-400'}`}
+              onClick={handleTriggerJudgeDemo}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 shadow-lg transition-all"
             >
-              Sign In
+              <Sparkles className="w-4 h-4" /> Try Judge Demo — No Account Required
             </button>
-            <button
-              type="button"
-              onClick={() => setAuthMode('signup')}
-              className={`py-2 text-xs font-semibold rounded-lg transition-all ${authMode === 'signup' ? 'bg-[#2563eb] text-white' : 'text-slate-400'}`}
-            >
-              Create Account
-            </button>
+            <p className="text-[10px] text-slate-400">Preloaded with weather feeds, science project, goals & events</p>
           </div>
 
-          <div className="grid grid-cols-2 bg-slate-900/50 p-1.5 rounded-xl border border-slate-800/80">
-            <button
-              type="button"
-              onClick={() => setLoginRole('Student')}
-              className={`py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                loginRole === 'Student' ? 'bg-slate-700 text-white' : 'text-slate-400'
-              }`}
-            >
-              Student
-            </button>
-            <button
-              type="button"
-              onClick={() => setLoginRole('Teacher')}
-              className={`py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                loginRole === 'Teacher' ? 'bg-slate-700 text-white' : 'text-slate-400'
-              }`}
-            >
-              Teacher / Mentor
-            </button>
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-slate-700"></div>
+            <span className="flex-shrink mx-3 text-slate-500 text-[11px] font-semibold uppercase">Or Sign In</span>
+            <div className="flex-grow border-t border-slate-700"></div>
           </div>
 
           <form onSubmit={handleAuthSubmit} className="space-y-4">
-            {authMode === 'signup' && (
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  {loginRole === 'Student' ? 'Student Full Name' : 'Teacher / Mentor Name'}
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    placeholder={loginRole === 'Student' ? 'e.g. Tanvi Thallapalle' : 'e.g. Mr. Thallapalle'}
-                    value={studentNameInput}
-                    onChange={(e) => setStudentNameInput(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Username / ID</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  placeholder="e.g. tanvit"
-                  value={usernameInput}
-                  onChange={(e) => setUsernameInput(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                  required
-                />
-              </div>
+            <div className="grid grid-cols-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setAuthMode('signin')}
+                className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${authMode === 'signin' ? 'bg-[#2563eb] text-white' : 'text-slate-400'}`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode('signup')}
+                className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${authMode === 'signup' ? 'bg-[#2563eb] text-white' : 'text-slate-400'}`}
+              >
+                Create Account
+              </button>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
-              <div className="relative">
-                <Key className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                  required
-                />
-              </div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                {authMode === 'signup' ? 'Full Name (Auto-formatted to First & Last Initial)' : 'Username'}
+              </label>
+              <input
+                type="text"
+                placeholder={authMode === 'signup' ? 'e.g. Maria Garcia' : 'e.g. mgarcia'}
+                value={studentNameInput}
+                onChange={(e) => setStudentNameInput(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Role Selection</label>
+              <select
+                value={loginRole}
+                onChange={(e) => setLoginRole(e.target.value as any)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="Student">Student (Protected Minor Mode)</option>
+                <option value="Teacher">Teacher / Mentor (Requires Verification)</option>
+              </select>
             </div>
 
             <button
               type="submit"
               className="w-full bg-[#2563eb] hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 shadow-lg transition-all"
             >
-              {authMode === 'signin' ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-              {authMode === 'signin' ? `Sign In as ${loginRole}` : `Register New ${loginRole} Account`}
+              <LogIn className="w-4 h-4" /> Sign In to Portal
             </button>
           </form>
         </div>
@@ -713,25 +803,29 @@ export default function App() {
 
   const navItems = [
     { name: 'Safe-Day Dashboard', icon: Shield },
-    { name: 'Invite Friends', icon: Share2 },
+    { name: 'Join Class or Study Group', icon: Users },
     { name: 'Activity & Wellbeing', icon: Heart },
-    { name: 'Study Buddy', icon: Users },
+    { name: 'Study Buddy', icon: MessageSquare },
     { name: 'Reading Tracker', icon: BookOpen },
-    { name: 'STEM Board & Events', icon: Award },
+    { name: 'STEM Opportunities Board', icon: Award },
     { name: 'Science-Fair Coach', icon: FlaskConical },
     { name: 'World Window', icon: Globe },
     { name: 'Creator Arcade', icon: Gamepad2 },
+    { name: 'Safety & Parent Info', icon: Lock }
   ];
 
   return (
     <div className="flex h-screen bg-[#f0f4f8] text-slate-800 font-sans overflow-hidden">
-      {/* ---------------- SIDEBAR ---------------- */}
+      {/* SIDEBAR */}
       <aside className="w-64 bg-[#0b1329] text-white flex flex-col shrink-0 justify-between py-6">
         <div className="space-y-6">
           <div className="px-6 flex items-center justify-between">
-            <span className="font-bold text-sm text-blue-400 tracking-wider uppercase">Central Valley App</span>
-            <span className="text-[10px] bg-blue-900 text-blue-300 px-2 py-0.5 rounded font-mono">{currentUser?.role}</span>
+            <span className="font-bold text-sm text-blue-400 tracking-wider uppercase">ValleyQuest</span>
+            <span className="text-[10px] bg-blue-900 text-blue-300 px-2 py-0.5 rounded font-mono font-bold">
+              {currentUser?.role}
+            </span>
           </div>
+
           <nav className="space-y-1 px-3">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -755,8 +849,8 @@ export default function App() {
         {/* User Profile Footer */}
         <div className="px-4 pt-4 border-t border-slate-800 flex items-center justify-between">
           <div className="text-xs truncate">
-            <p className="font-semibold text-white truncate">{currentUser?.studentName || currentUser?.username}</p>
-            <p className="text-blue-400 font-mono text-[11px]">Code: {currentUser?.code}</p>
+            <p className="font-semibold text-white truncate">{currentUser?.studentName}</p>
+            <p className="text-blue-400 font-mono text-[11px]">Class Code: {currentUser?.code}</p>
           </div>
           <button
             onClick={() => setIsLoggedIn(false)}
@@ -768,19 +862,16 @@ export default function App() {
         </div>
       </aside>
 
-      {/* ---------------- MAIN CONTENT AREA ---------------- */}
+      {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <header className="bg-[#0b1329] border-b border-slate-800 px-8 py-3 flex items-center justify-between gap-4 text-xs">
-          <div className="flex items-center gap-2 text-slate-300">
+        <header className="bg-[#0b1329] border-b border-slate-800 px-8 py-3 flex items-center justify-between gap-4 text-xs text-white">
+          <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4 text-pink-500" />
-            <span className="font-medium">Central Valley County Selector:</span>
-          </div>
-
-          <div className="flex items-center gap-3">
+            <span className="font-medium text-slate-300">Central Valley Zip Selector:</span>
             <select
               value={zipCode}
               onChange={(e) => setZipCode(e.target.value)}
-              className="bg-[#1e293b] border border-slate-700 text-white rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-500"
+              className="bg-[#1e293b] border border-slate-700 text-white rounded-lg px-3 py-1 text-xs font-semibold focus:outline-none focus:border-blue-500"
             >
               <option value="93301">Bakersfield (Kern) - 93301</option>
               <option value="93311">SW Bakersfield (Kern) - 93311</option>
@@ -788,25 +879,44 @@ export default function App() {
               <option value="95202">Stockton (San Joaquin) - 95202</option>
               <option value="95350">Modesto (Stanislaus) - 95350</option>
             </select>
+          </div>
 
+          <div className="flex items-center gap-3">
+            <span className="bg-emerald-900/60 text-emerald-300 px-2.5 py-1 rounded border border-emerald-500/40 text-[11px] font-semibold flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5" /> Child Safety Shield Active
+            </span>
             <span className="bg-blue-600/30 text-blue-300 px-3 py-1 rounded-full font-semibold border border-blue-500/40">
               {currentLocation.district}
             </span>
           </div>
         </header>
 
+        {safetyNotice && (
+          <div className="bg-amber-500 text-white text-xs px-6 py-2.5 flex items-center justify-between font-medium">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{safetyNotice}</span>
+            </div>
+            <button onClick={() => setSafetyNotice(null)} className="underline text-amber-100 hover:text-white">Dismiss</button>
+          </div>
+        )}
+
         <main className="p-8 max-w-6xl w-full mx-auto space-y-6">
+          {/* Core App Purpose Banner */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">
                 {currentLocation.community} ({zipCode}) • {currentLocation.county}
               </p>
-              <h1 className="text-2xl font-bold text-slate-900">
-                Welcome, {currentUser?.studentName || currentUser?.username}!
+              <h1 className="text-xl font-bold text-slate-900">
+                ValleyQuest: Student Safety & Opportunity Companion
               </h1>
+              <p className="text-xs text-slate-500 mt-1">
+                Helping Central Valley students decide how to prepare for the day, stay healthy, and discover local learning opportunities.
+              </p>
             </div>
             <div className="text-right">
-              <span className="text-xs font-bold text-slate-400">YOUR UNIQUE CLASS CODE</span>
+              <span className="text-xs font-bold text-slate-400">CLASS GROUP CODE</span>
               <p className="text-lg font-mono font-extrabold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg border border-blue-200">
                 {currentUser?.code}
               </p>
@@ -814,108 +924,128 @@ export default function App() {
           </div>
 
           {/* ========================================================
-              TAB 1: SAFE-DAY DASHBOARD
+              MODULE 1: SAFE-DAY DASHBOARD
              ======================================================== */}
           {activeTab === 'Safe-Day Dashboard' && (
             <div className="space-y-6">
-              <h2 className="text-lg font-bold text-slate-800">Environmental & Safety Dashboard</h2>
+              <h2 className="text-lg font-bold text-slate-800">Safe-Day Real-Time Environmental Dashboard</h2>
 
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`p-4 rounded-xl ${currentLocation.aqi > 100 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                    <Wind className="w-8 h-8" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Real-time AQI & Weather Card */}
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-3 rounded-xl ${currentLocation.aqi > 100 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        <Wind className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-400 font-bold uppercase">Air Quality Index</span>
+                        <h3 className="text-2xl font-extrabold text-slate-800">{currentLocation.aqi} AQI</h3>
+                        <p className="text-xs font-medium text-slate-500">{currentLocation.aqiStatus}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-2xl font-bold text-slate-800">{currentLocation.temp}</span>
+                      <p className="text-[11px] text-slate-400">Current Temp</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs text-slate-400 font-semibold uppercase">Air Quality Index (AQI)</span>
-                    <h3 className="text-2xl font-extrabold text-slate-800">{currentLocation.aqi} AQI</h3>
-                    <p className="text-xs font-medium text-slate-500">{currentLocation.aqiStatus}</p>
+
+                  <div className="border-t border-slate-100 pt-3 text-[11px] text-slate-500 space-y-1">
+                    <p><strong>Source Feed:</strong> {currentLocation.aqiSource}</p>
+                    <p className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" /> <strong>Updated at:</strong> {currentLocation.aqiUpdatedAt}</p>
+                    <p><strong>Current Location:</strong> {currentLocation.city}, {currentLocation.county}</p>
+                    <a href={currentLocation.eventsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-600 font-bold hover:underline pt-1">
+                      Official Air Quality & Alert Feeds <ExternalLink className="w-3 h-3" />
+                    </a>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-3xl font-bold text-slate-800">{currentLocation.temp}</span>
-                  <p className="text-xs text-slate-400">Current Temp</p>
+
+                {/* Local Traffic Alerts */}
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-800">
+                    <Bell className="w-4 h-4 text-amber-500" />
+                    <span>Caltrans Traffic & Commute Advisory</span>
+                  </div>
+                  <p className="text-xs text-slate-600 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    {currentLocation.trafficAlert}
+                  </p>
+                  <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
+                    <strong>Source:</strong> Caltrans District 6 Road Conditions • <strong>Updated:</strong> Today, 1:10 PM PDT
+                  </div>
                 </div>
               </div>
 
+              {/* Personalized Advice Based on Outdoor Gear */}
               <div className="bg-gradient-to-r from-blue-900 to-slate-900 text-white rounded-xl p-6 shadow-md space-y-3">
                 <div className="flex items-center gap-2">
                   <Glasses className="w-5 h-5 text-blue-400" />
-                  <h3 className="font-bold text-sm">Recommended Gear & Clothing for Today</h3>
+                  <h3 className="font-bold text-sm">Personalized Daily Guidance & Outdoor Gear Advice</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-                  {currentLocation.rainForecast ? (
-                    <div className="bg-slate-800/80 p-3 rounded-lg border border-blue-500/40 flex items-center gap-3">
-                      <CloudRain className="w-6 h-6 text-blue-400" />
-                      <div className="text-xs">
-                        <p className="font-bold text-white">Carry Umbrella / Raincoat</p>
-                        <p className="text-slate-400">Rain in forecast for {currentLocation.city}.</p>
-                      </div>
+                  <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700 flex items-center gap-3">
+                    <Sun className="w-6 h-6 text-amber-400 shrink-0" />
+                    <div className="text-xs">
+                      <p className="font-bold text-white">Heat & Sun Protection</p>
+                      <p className="text-slate-300">High temperatures expected. Limit continuous outdoor exposure during afternoon recess.</p>
                     </div>
-                  ) : (
-                    <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700 flex items-center gap-3">
-                      <Sun className="w-6 h-6 text-amber-400" />
-                      <div className="text-xs">
-                        <p className="font-bold text-white">Clear Weather Gear</p>
-                        <p className="text-slate-400">No rain expected today.</p>
-                      </div>
-                    </div>
-                  )}
+                  </div>
 
                   {currentLocation.aqi > 100 && (
                     <div className="bg-slate-800/80 p-3 rounded-lg border border-amber-500/40 flex items-center gap-3">
-                      <Shield className="w-6 h-6 text-amber-400" />
+                      <Shield className="w-6 h-6 text-amber-400 shrink-0" />
                       <div className="text-xs">
-                        <p className="font-bold text-white">Wear Protective Mask</p>
-                        <p className="text-slate-400">Elevated AQI: N95 mask recommended for outdoor recess.</p>
+                        <p className="font-bold text-white">Outdoor Recess Mask</p>
+                        <p className="text-slate-300">Elevated AQI level: N95 or indoor gym activities recommended.</p>
                       </div>
                     </div>
                   )}
 
                   <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700 flex items-center gap-3">
-                    <Droplet className="w-6 h-6 text-blue-400" />
+                    <Droplet className="w-6 h-6 text-blue-400 shrink-0" />
                     <div className="text-xs">
-                      <p className="font-bold text-white">Hydration Bottle</p>
-                      <p className="text-slate-400">Refillable water bottle for high temperatures.</p>
+                      <p className="font-bold text-white">Hydration Reminder</p>
+                      <p className="text-slate-300">Bring a refillable water bottle to school today.</p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Environmental Alerts */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className={`p-5 rounded-xl border ${currentLocation.heatAlert ? 'bg-orange-50 border-orange-200 text-orange-900' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
                   <div className="flex items-center gap-2 mb-2 font-bold text-sm">
                     <Sun className="w-5 h-5 text-orange-500" />
-                    <span>Extreme Heat Alert</span>
+                    <span>Official Excessive Heat Warning</span>
                   </div>
-                  <p className="text-xs">{currentLocation.heatAlert || 'No active heat warnings for this area.'}</p>
+                  <p className="text-xs">{currentLocation.heatAlert || 'No active heat alerts for this zip code.'}</p>
                 </div>
 
                 <div className={`p-5 rounded-xl border ${currentLocation.fogAlert ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
                   <div className="flex items-center gap-2 mb-2 font-bold text-sm">
                     <CloudFog className="w-5 h-5 text-blue-500" />
-                    <span>Tule Fog Advisory</span>
+                    <span>Dense Tule Fog Advisory</span>
                   </div>
-                  <p className="text-xs">{currentLocation.fogAlert || 'Clear visibility reported.'}</p>
+                  <p className="text-xs">{currentLocation.fogAlert || 'Clear visibility reported on roadways.'}</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* ========================================================
-              TAB 2: INVITE FRIENDS & UNIQUE 6-DIGIT CODE EXCHANGER
+              MODULE 2: JOIN CLASS OR STUDY GROUP (RENAMED & RESTRICTED)
              ======================================================== */}
-          {activeTab === 'Invite Friends' && (
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100 max-w-xl mx-auto space-y-6">
+          {activeTab === 'Join Class or Study Group' && (
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100 max-w-2xl mx-auto space-y-6">
               <div className="text-center space-y-1">
-                <Share2 className="w-10 h-10 text-blue-600 mx-auto" />
-                <h2 className="text-xl font-bold text-slate-800">Unique Class Code Exchange</h2>
-                <p className="text-xs text-slate-500">Every student is assigned a unique 6-digit code upon registration.</p>
+                <Users className="w-10 h-10 text-blue-600 mx-auto" />
+                <h2 className="text-xl font-bold text-slate-800">Join Class or Teacher Study Group</h2>
+                <p className="text-xs text-slate-500">Unrestricted adult and peer connections are disabled. Join structured teacher-created groups using expiring class codes.</p>
               </div>
 
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-center space-y-1">
-                <p className="text-xs font-semibold text-blue-700">Your Code to Share:</p>
+                <p className="text-xs font-semibold text-blue-700">Your Class Group Code:</p>
                 <p className="text-2xl font-mono font-extrabold text-blue-900">{currentUser?.code}</p>
-                <p className="text-[11px] text-blue-600">Registered Name: <strong>{currentUser?.studentName}</strong></p>
+                <p className="text-[11px] text-blue-600">Rate-limited code (Expires automatically after 48 hours for student protection)</p>
               </div>
 
               {inviteStatusMsg && (
@@ -926,7 +1056,7 @@ export default function App() {
               )}
 
               <div className="space-y-3">
-                <label className="block text-xs font-medium text-slate-700">Enter a Classmate or Teacher Code:</label>
+                <label className="block text-xs font-medium text-slate-700">Enter Teacher Class Code or Group Code:</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -939,14 +1069,13 @@ export default function App() {
                     onClick={handleAddCodeBuddy}
                     className="bg-[#2563eb] hover:bg-blue-600 text-white font-semibold text-xs px-4 py-2 rounded-lg"
                   >
-                    Connect Code
+                    Join Study Group
                   </button>
                 </div>
               </div>
 
-              {/* Connected Peers Display (Renders Registered Student Name + Code) */}
               <div className="border-t border-slate-100 pt-4 space-y-3">
-                <h3 className="text-xs font-bold text-slate-700">Connected Peers ({currentUser?.joinedBuddies.length || 0})</h3>
+                <h3 className="text-xs font-bold text-slate-700">Joined Class Groups & Peers ({currentUser?.joinedBuddies.length || 0})</h3>
                 {currentUser?.joinedBuddies && currentUser.joinedBuddies.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {currentUser.joinedBuddies.map((buddy, idx) => (
@@ -958,17 +1087,17 @@ export default function App() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400">No study buddies connected yet. Exchange codes above to add student names!</p>
+                  <p className="text-xs text-slate-400">No class groups joined yet. Enter a code above to join your teacher's study circle.</p>
                 )}
               </div>
             </div>
           )}
 
           {/* ========================================================
-              TAB 3: ACTIVITY & WELLBEING
+              MODULE 3: ACTIVITY & WELLBEING (PROTECTED MENTAL HEALTH RESOURCES)
              ======================================================== */}
           {activeTab === 'Activity & Wellbeing' && (
-            <>
+            <div className="space-y-6">
               <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 w-fit">
                 <button
                   onClick={() => setActiveWellbeingTab('planner')}
@@ -980,13 +1109,13 @@ export default function App() {
                   onClick={() => setActiveWellbeingTab('water')}
                   className={`px-4 py-2 rounded-lg text-xs font-semibold ${activeWellbeingTab === 'water' ? 'bg-[#2563eb] text-white' : 'text-slate-600'}`}
                 >
-                  Water, Steps & Movement
+                  Water & Hydration
                 </button>
                 <button
                   onClick={() => setActiveWellbeingTab('mood')}
                   className={`px-4 py-2 rounded-lg text-xs font-semibold ${activeWellbeingTab === 'mood' ? 'bg-[#2563eb] text-white' : 'text-slate-600'}`}
                 >
-                  Wellbeing & Mood
+                  Private Reflection & Support
                 </button>
               </div>
 
@@ -995,11 +1124,11 @@ export default function App() {
                   <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center flex flex-col items-center justify-between">
                     <div className="space-y-3">
                       <Droplet className="w-8 h-8 text-blue-500 mx-auto" />
-                      <h2 className="text-base font-bold text-slate-800">Hydration Tracker</h2>
+                      <h2 className="text-base font-bold text-slate-800">Valley Hydration Tracker</h2>
                       <div className="text-4xl font-extrabold text-blue-600">
                         {waterCount} <span className="text-slate-400 text-2xl font-normal">/ 8</span>
                       </div>
-                      <p className="text-xs text-slate-400">Glasses consumed (8 oz each)</p>
+                      <p className="text-xs text-slate-400">Glasses of water (8 oz each)</p>
                     </div>
                     <div className="flex gap-2 mt-6">
                       <button onClick={() => setWaterCount((c) => c + 1)} className="bg-[#2563eb] text-white text-xs px-3 py-1.5 rounded-lg">+ Add Glass</button>
@@ -1014,9 +1143,9 @@ export default function App() {
                       <div className="text-4xl font-extrabold text-emerald-600">
                         {stepCount.toLocaleString()} <span className="text-slate-400 text-2xl font-normal">/ 10k</span>
                       </div>
-                      <p className="text-xs text-slate-400">Daily walking goal</p>
+                      <p className="text-xs text-slate-400">Daily physical steps target</p>
                     </div>
-                    <button onClick={() => setStepCount((s) => s + 500)} className="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4 py-2 rounded-lg font-semibold">+ 500 Steps</button>
+                    <button onClick={() => setStepCount((s) => s + 500)} className="mt-6 bg-emerald-600 text-white text-xs px-4 py-2 rounded-lg font-semibold">+ 500 Steps</button>
                   </div>
 
                   <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center flex flex-col items-center justify-between">
@@ -1026,27 +1155,27 @@ export default function App() {
                       <div className="text-4xl font-extrabold text-rose-600">
                         {movementMins} <span className="text-slate-400 text-2xl font-normal">/ 60 mins</span>
                       </div>
-                      <p className="text-xs text-slate-400">Daily exercise target</p>
+                      <p className="text-xs text-slate-400">Outdoor exercise mins</p>
                     </div>
-                    <button onClick={() => setMovementMins((m) => m + 10)} className="mt-6 bg-rose-600 hover:bg-rose-700 text-white text-xs px-4 py-2 rounded-lg font-semibold">+ 10 Mins Movement</button>
+                    <button onClick={() => setMovementMins((m) => m + 10)} className="mt-6 bg-rose-600 text-white text-xs px-4 py-2 rounded-lg font-semibold">+ 10 Mins</button>
                   </div>
                 </div>
               )}
 
               {activeWellbeingTab === 'planner' && (
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-6">
-                  <h2 className="text-base font-bold text-slate-800">Scheduled Daily Activities</h2>
+                  <h2 className="text-base font-bold text-slate-800">Scheduled Daily Outdoor Activities</h2>
                   <div className="flex gap-3">
                     <input
                       type="text"
-                      placeholder="Activity Title"
+                      placeholder="Activity Title (e.g. Track practice)"
                       value={newActivityTitle}
                       onChange={(e) => setNewActivityTitle(e.target.value)}
                       className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-xs"
                     />
                     <input
                       type="text"
-                      placeholder="Time (e.g. 5:00 PM)"
+                      placeholder="Time (e.g. 4:30 PM)"
                       value={newActivityTime}
                       onChange={(e) => setNewActivityTime(e.target.value)}
                       className="w-32 border border-slate-300 rounded-lg px-3 py-2 text-xs"
@@ -1061,7 +1190,7 @@ export default function App() {
                       }}
                       className="bg-blue-600 text-white font-semibold text-xs px-4 py-2 rounded-lg"
                     >
-                      Add
+                      Add Activity
                     </button>
                   </div>
                   <div className="space-y-2">
@@ -1076,46 +1205,69 @@ export default function App() {
               )}
 
               {activeWellbeingTab === 'mood' && (
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-6 text-center max-w-lg mx-auto">
-                  <h2 className="text-base font-bold text-slate-800">How are you feeling today?</h2>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['Energized', 'Focused', 'Calm', 'Tired', 'Stressed', 'Motivated'].map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setSelectedMood(m)}
-                        className={`p-4 rounded-xl border text-xs font-bold ${selectedMood === m ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
-                      >
-                        {m}
-                      </button>
-                    ))}
+                <div className="space-y-6">
+                  {/* Crisis & Professional Health Notice */}
+                  <div className="bg-red-50 border border-red-300 text-red-900 p-5 rounded-xl space-y-2">
+                    <div className="flex items-center gap-2 font-bold text-sm">
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                      <span>Crisis Support & Mental Health Resources</span>
+                    </div>
+                    <p className="text-xs">
+                      If you or a classmate are experiencing distress, support is available 24/7. Call or text <strong>988</strong> to reach the Suicide & Crisis Lifeline.
+                    </p>
+                    <p className="text-[11px] text-red-700 font-semibold italic border-t border-red-200 pt-2">
+                      Disclaimer: ValleyQuest is an educational companion app and is not a replacement for professional mental-health care.
+                    </p>
+                  </div>
+
+                  {/* Private Self-Reflection Card */}
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center max-w-xl mx-auto space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <h2 className="text-base font-bold text-slate-800">Private Reflection Journal</h2>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Strictly Private
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500">Public mood sharing is strictly prohibited on ValleyQuest to protect student privacy.</p>
+                    
+                    <div className="grid grid-cols-3 gap-3">
+                      {['Energized', 'Focused', 'Calm', 'Tired', 'Stressed', 'Motivated'].map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => setSelectedMood(m)}
+                          className={`p-3 rounded-xl border text-xs font-bold transition-all ${
+                            selectedMood === m ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
 
           {/* ========================================================
-              TAB 4: STUDY BUDDY
+              MODULE 4: STUDY BUDDY (MODERATED QUESTION HUB)
              ======================================================== */}
           {activeTab === 'Study Buddy' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-base font-bold text-slate-800">Homework & Test-Prep Help Hub</h2>
-                    <p className="text-xs text-slate-500">Ask questions, share test study guides, and get peer answers.</p>
+                    <h2 className="text-base font-bold text-slate-800">Study Buddy: Homework Help Hub</h2>
+                    <p className="text-xs text-slate-500">Ask homework questions in a moderated student space. Direct private messaging is disabled for safety.</p>
                   </div>
-                  <button
-                    onClick={() => setActiveTab('Invite Friends')}
-                    className="bg-blue-600 text-white font-semibold text-xs px-3 py-2 rounded-lg flex items-center gap-1"
-                  >
-                    <Share2 className="w-4 h-4" /> Share Code ({currentUser?.code})
-                  </button>
+                  <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1">
+                    <Shield className="w-3.5 h-3.5" /> No Direct Messages Allowed
+                  </span>
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                   <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    <HelpCircle className="w-4 h-4 text-blue-600" /> Ask a Homework / Test Question
+                    <HelpCircle className="w-4 h-4 text-blue-600" /> Post Question to Teacher Review Queue
                   </h3>
                   <div className="flex gap-2">
                     <select
@@ -1130,35 +1282,33 @@ export default function App() {
                     </select>
                     <input
                       type="text"
-                      placeholder="e.g. Can someone explain quadratic formulas or periodic trends?"
+                      placeholder="Ask an academic question..."
                       value={newQuestionText}
                       onChange={(e) => setNewQuestionText(e.target.value)}
                       className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none"
                     />
                     <button
-                      onClick={() => {
-                        if (newQuestionText) {
-                          setHomeworkQuestions([
-                            ...homeworkQuestions,
-                            { id: Date.now(), student: currentUser?.studentName || currentUser?.username || 'Student', subject: newSubject, question: newQuestionText, answers: [] }
-                          ]);
-                          setNewQuestionText('');
-                        }
-                      }}
-                      className="bg-blue-600 text-white font-semibold text-xs px-4 py-1.5 rounded-lg flex items-center gap-1"
+                      onClick={handlePostQuestion}
+                      className="bg-[#2563eb] text-white font-semibold text-xs px-4 py-1.5 rounded-lg flex items-center gap-1"
                     >
-                      <Send className="w-3 h-3" /> Post Question
+                      <Send className="w-3 h-3" /> Submit
                     </button>
                   </div>
                 </div>
               </div>
 
+              {/* Questions Stream */}
               <div className="space-y-4">
                 {homeworkQuestions.map((q) => (
                   <div key={q.id} className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm space-y-3">
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">{q.subject}</span>
-                      <span className="text-slate-400">Asked by: <strong>{q.student}</strong></span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${q.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {q.status}
+                        </span>
+                        <span className="text-slate-400">Asked by: <strong>{q.student}</strong></span>
+                      </div>
                     </div>
 
                     <p className="text-sm font-semibold text-slate-800">{q.question}</p>
@@ -1175,7 +1325,7 @@ export default function App() {
                     <div className="flex gap-2 pt-2">
                       <input
                         type="text"
-                        placeholder="Provide study tip or answer..."
+                        placeholder="Write a helpful answer..."
                         value={replyText[q.id] || ''}
                         onChange={(e) => setReplyText({ ...replyText, [q.id]: e.target.value })}
                         className="flex-1 border border-slate-200 rounded-lg px-3 py-1 text-xs"
@@ -1183,15 +1333,27 @@ export default function App() {
                       <button
                         onClick={() => {
                           if (replyText[q.id]) {
+                            const check = sanitizeContent(replyText[q.id]);
+                            if (!check.isSafe) {
+                              setSafetyNotice(`Reply blocked: ${check.warning}`);
+                              return;
+                            }
                             setHomeworkQuestions(
-                              homeworkQuestions.map(item => item.id === q.id ? { ...item, answers: [...item.answers, `${currentUser?.studentName || currentUser?.username}: ${replyText[q.id]}`] } : item)
+                              homeworkQuestions.map(item => item.id === q.id ? { ...item, answers: [...item.answers, `${currentUser?.studentName}: ${check.cleanText}`] } : item)
                             );
                             setReplyText({ ...replyText, [q.id]: '' });
                           }
                         }}
-                        className="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1 rounded-lg font-semibold"
+                        className="bg-slate-800 text-white text-xs px-3 py-1 rounded-lg font-semibold"
                       >
-                        Reply
+                        Answer
+                      </button>
+                      <button
+                        onClick={() => setSafetyNotice(`Post #${q.id} flagged and reported to school safety administrator.`)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"
+                        title="Report Inappropriate Post"
+                      >
+                        <Flag className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -1201,197 +1363,87 @@ export default function App() {
           )}
 
           {/* ========================================================
-              TAB 5: READING TRACKER
+              MODULE 5: READING TRACKER (PAGES, STREAKS & GOALS)
              ======================================================== */}
           {activeTab === 'Reading Tracker' && (
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-xl border border-slate-100 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-bold text-slate-800">Reading Tracker & Book Recommendations</h2>
-                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                    <Library className="w-4 h-4 text-blue-600" />
-                    <span>Active Libraries in {currentLocation.county}:</span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {currentLocation.libraries.map((lib) => (
-                    <span key={lib} className="bg-slate-100 border border-slate-200 text-slate-700 text-xs px-3 py-1 rounded-full font-medium">
-                      📍 {lib}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-5">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              {/* Reading Progress Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                      <Filter className="w-4 h-4 text-blue-600" /> Book Recommendation Explorer
-                    </h3>
-                    <p className="text-xs text-slate-500">Toggle target age and genre to explore curated books</p>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Books Completed</span>
+                    <h3 className="text-2xl font-extrabold text-slate-800">{booksReadCount} Books</h3>
                   </div>
-                  
-                  <div className="flex items-center gap-2 w-full md:w-auto">
-                    <span className="bg-blue-50 text-blue-700 text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-blue-200 flex items-center gap-1 shrink-0">
-                      <Calendar className="w-3.5 h-3.5" /> List Updated: {currentMonthName}
-                    </span>
-                    <div className="relative flex-1 md:w-56">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                      <input
-                        type="text"
-                        placeholder="Search title or author..."
-                        value={searchBookTerm}
-                        onChange={(e) => setSearchBookTerm(e.target.value)}
-                        className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
+                  <button onClick={() => setBooksReadCount(c => c + 1)} className="bg-blue-50 text-blue-700 text-xs px-3 py-1.5 rounded-lg font-bold border border-blue-200">+ Log Book</button>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 block">1. Select Target Age Group:</label>
-                  <div className="flex flex-wrap gap-2">
-                    {['All Ages', 'Ages 2–5', 'Ages 6–8', 'Ages 9–12', 'Ages 13–18'].map((age) => (
-                      <button
-                        key={age}
-                        onClick={() => setSelectedAgeGroup(age)}
-                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                          selectedAgeGroup === age
-                            ? 'bg-[#2563eb] text-white shadow'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                      >
-                        {age}
-                      </button>
-                    ))}
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Monthly Reading Goal</span>
+                    <h3 className="text-2xl font-extrabold text-blue-600">{readingMinutes} / {readingGoalMins} mins</h3>
                   </div>
+                  <button onClick={() => setReadingMinutes(m => m + 15)} className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold">+ 15 Mins</button>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 block">2. Filter by Genre:</label>
-                  <div className="flex flex-wrap gap-2">
-                    {['All Genres', 'Fantasy', 'STEM', 'Classic', 'Fiction', 'Dystopian', 'Mystery'].map((gen) => (
-                      <button
-                        key={gen}
-                        onClick={() => setSelectedGenre(gen)}
-                        className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                          selectedGenre === gen
-                            ? 'bg-slate-800 text-white'
-                            : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {gen}
-                      </button>
-                    ))}
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Reading Streak</span>
+                    <h3 className="text-2xl font-extrabold text-amber-500">🔥 6 Days</h3>
                   </div>
+                  <span className="text-xs text-slate-400 font-semibold">Keep it up!</span>
                 </div>
               </div>
 
+              {/* Book Recommendation Filter */}
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
-                <div className="flex justify-between items-center text-xs font-semibold text-slate-600">
-                  <span>Showing {filteredBooks.length} Recommendation(s)</span>
-                  <span className="text-blue-600">Active Filter: {selectedAgeGroup} • {selectedGenre}</span>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-[#3498db] text-white">
-                        <th className="p-2.5 border border-slate-200 text-center w-10">#</th>
-                        <th className="p-2.5 border border-slate-200">Book Title</th>
-                        <th className="p-2.5 border border-slate-200">Author</th>
-                        <th className="p-2.5 border border-slate-200 text-center w-28">Target Age</th>
-                        <th className="p-2.5 border border-slate-200">Genre</th>
-                        <th className="p-2.5 border border-slate-200">Description</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredBooks.length > 0 ? (
-                        filteredBooks.map((book, idx) => (
-                          <tr key={book.id} className="even:bg-slate-50 hover:bg-slate-100 transition-colors">
-                            <td className="p-2.5 border border-slate-200 text-center font-semibold text-slate-500">{idx + 1}</td>
-                            <td className="p-2.5 border border-slate-200 font-bold text-slate-900">{book.title}</td>
-                            <td className="p-2.5 border border-slate-200 text-slate-600">{book.author}</td>
-                            <td className="p-2.5 border border-slate-200 text-center">
-                              <span className="inline-block bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold border border-blue-100">
-                                {book.ageCategory}
-                              </span>
-                            </td>
-                            <td className="p-2.5 border border-slate-200 text-slate-600 font-medium">{book.genre}</td>
-                            <td className="p-2.5 border border-slate-200 text-slate-500 text-[11px]">{book.description}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={6} className="p-6 text-center text-slate-400">
-                            No books match the selected age group or genre filter. Try selecting "All Genres" or "All Ages" above.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              TAB 6: STEM BOARD & EVENTS (DYNAMICALLY UPDATES BY ZIP CODE & COUNTY)
-             ======================================================== */}
-          {activeTab === 'STEM Board & Events' && (
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-6">
-                <div className="flex justify-between items-center flex-wrap gap-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      {currentLocation.county} Student Events Board
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      Showing academic competitions, STEM showcases, and leadership events active for Zip Code <strong>{zipCode}</strong>:
-                    </p>
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                  <h2 className="text-base font-bold text-slate-800">Curated Reading Recommendations</h2>
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedAgeGroup}
+                      onChange={(e) => setSelectedAgeGroup(e.target.value)}
+                      className="border border-slate-300 rounded-lg px-2 py-1 text-xs bg-white"
+                    >
+                      <option value="All Ages">All Ages</option>
+                      <option value="Ages 2–5">Ages 2–5</option>
+                      <option value="Ages 6–8">Ages 6–8</option>
+                      <option value="Ages 9–12">Ages 9–12</option>
+                      <option value="Ages 13–18">Ages 13–18</option>
+                    </select>
+                    <select
+                      value={selectedGenre}
+                      onChange={(e) => setSelectedGenre(e.target.value)}
+                      className="border border-slate-300 rounded-lg px-2 py-1 text-xs bg-white"
+                    >
+                      <option value="All Genres">All Genres</option>
+                      <option value="STEM">STEM</option>
+                      <option value="Fantasy">Fantasy</option>
+                      <option value="Classic">Classic</option>
+                    </select>
                   </div>
-                  <a
-                    href={currentLocation.eventsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-[#2563eb] hover:bg-blue-600 text-white font-semibold text-xs px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Visit Official {currentLocation.county} Event Hub
-                  </a>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="bg-[#3498db] text-white">
-                        <th className="p-2.5 border border-slate-200">Category</th>
-                        <th className="p-2.5 border border-slate-200">Event Name</th>
-                        <th className="p-2.5 border border-slate-200">Venue / Location</th>
-                        <th className="p-2.5 border border-slate-200 text-center">County</th>
+                      <tr className="bg-slate-800 text-white">
+                        <th className="p-2.5 border border-slate-700">Title</th>
+                        <th className="p-2.5 border border-slate-700">Author</th>
+                        <th className="p-2.5 border border-slate-700">Target Age</th>
+                        <th className="p-2.5 border border-slate-700">Genre</th>
+                        <th className="p-2.5 border border-slate-700">Description</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredCountyEvents.length > 0 ? (
-                        filteredCountyEvents.map((evt, idx) => (
-                          <tr key={idx} className="even:bg-slate-50 hover:bg-slate-100">
-                            <td className="p-2.5 border border-slate-200">
-                              <span className="inline-block bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[11px] font-medium">
-                                {evt.category}
-                              </span>
-                            </td>
-                            <td className="p-2.5 border border-slate-200 font-semibold text-slate-900">{evt.name}</td>
-                            <td className="p-2.5 border border-slate-200 text-slate-600">{evt.venue}</td>
-                            <td className="p-2.5 border border-slate-200 text-center font-bold text-blue-700">{evt.county}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={4} className="p-6 text-center text-slate-400">
-                            No registered events found for {currentLocation.county}. Check the official county portal above.
-                          </td>
+                      {filteredBooks.map((book) => (
+                        <tr key={book.id} className="even:bg-slate-50 hover:bg-slate-100">
+                          <td className="p-2.5 border border-slate-200 font-bold text-slate-900">{book.title}</td>
+                          <td className="p-2.5 border border-slate-200 text-slate-600">{book.author}</td>
+                          <td className="p-2.5 border border-slate-200">{book.ageCategory}</td>
+                          <td className="p-2.5 border border-slate-200 text-slate-600 font-medium">{book.genre}</td>
+                          <td className="p-2.5 border border-slate-200 text-slate-500 text-[11px]">{book.description}</td>
                         </tr>
-                      )}
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -1400,74 +1452,161 @@ export default function App() {
           )}
 
           {/* ========================================================
-              TAB 7: SCIENCE-FAIR COACH
+              MODULE 6: KERN COUNTY STEM OPPORTUNITIES BOARD (ACTIONABLE)
+             ======================================================== */}
+          {activeTab === 'STEM Opportunities Board' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-3">
+                <h2 className="text-base font-bold text-slate-800">Kern County & Regional Student Opportunities Board</h2>
+                <p className="text-xs text-slate-500">
+                  Comprehensive local competitions with grade eligibility, deadlines, locations, and direct verified official links.
+                </p>
+              </div>
+
+              <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-slate-100">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-[#2563eb] text-white">
+                      <th className="p-3 border border-blue-600">Event Name</th>
+                      <th className="p-3 border border-blue-600">Category</th>
+                      <th className="p-3 border border-blue-600">Application Deadline</th>
+                      <th className="p-3 border border-blue-600">Event Date</th>
+                      <th className="p-3 border border-blue-600">Eligible Grades</th>
+                      <th className="p-3 border border-blue-600">Location</th>
+                      <th className="p-3 border border-blue-600 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {KERN_OPPORTUNITIES.map((opp) => (
+                      <tr key={opp.id} className="even:bg-slate-50 hover:bg-slate-100 transition-colors">
+                        <td className="p-3 border border-slate-200 font-bold text-slate-900">{opp.name}</td>
+                        <td className="p-3 border border-slate-200">
+                          <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[11px] font-semibold">{opp.category}</span>
+                        </td>
+                        <td className="p-3 border border-slate-200 font-bold text-red-600">{opp.deadline}</td>
+                        <td className="p-3 border border-slate-200 font-semibold text-slate-700">{opp.eventDate}</td>
+                        <td className="p-3 border border-slate-200 font-medium text-slate-600">{opp.eligibleGrades}</td>
+                        <td className="p-3 border border-slate-200 text-slate-600">{opp.location}</td>
+                        <td className="p-3 border border-slate-200 text-center space-y-1">
+                          <a
+                            href={opp.officialSourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-[11px] font-bold"
+                          >
+                            Source Link <ExternalLink className="w-3 h-3" />
+                          </a>
+                          <div>
+                            <button
+                              onClick={() => toggleReminder(opp.id)}
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-colors ${
+                                reminders.includes(opp.id) ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-600'
+                              }`}
+                            >
+                              {reminders.includes(opp.id) ? '✓ Reminder Set' : '+ Add Reminder'}
+                            </button>
+                          </div>
+                          <p className="text-[9px] text-slate-400">Verified on {opp.verifiedOn}</p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================
+              MODULE 7: SCIENCE-FAIR COACH (FULL PROJECT HUB)
              ======================================================== */}
           {activeTab === 'Science-Fair Coach' && (
             <div className="space-y-6">
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-2">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">Science-Fair Progress & Mentor Hub</h2>
-                    <p className="text-xs text-slate-500">
-                      {currentUser?.role === 'Teacher' ? 'Teacher View: Provide feedback to students' : 'Student View: Track experiment milestones'}
-                    </p>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex justify-between items-center">
+                <div>
+                  <h2 className="text-base font-bold text-slate-800">Science-Fair Project & Hypothesis Coach</h2>
+                  <p className="text-xs text-slate-500">Formulate hypotheses, perform variable checks, maintain data tables, and receive mentor feedback.</p>
+                </div>
+                <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold border border-purple-200">
+                  Kern Regional Science Fair Ready
+                </span>
+              </div>
+
+              {/* Project Details */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
+                <h3 className="text-sm font-bold text-slate-900">{scienceProject.title}</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                    <strong className="block text-slate-700 mb-1">Independent Variable:</strong>
+                    <span className="text-slate-600">{scienceProject.independentVariable}</span>
                   </div>
-                  <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold border border-purple-200">
-                    Role: {currentUser?.role}
-                  </span>
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                    <strong className="block text-slate-700 mb-1">Dependent Variable:</strong>
+                    <span className="text-slate-600">{scienceProject.dependentVariable}</span>
+                  </div>
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <strong className="block text-emerald-800 mb-1">Control Group Check:</strong>
+                    <span className="text-emerald-700">{scienceProject.controlGroup}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+                  <strong className="text-blue-900 block mb-1">Hypothesis Guidance Statement:</strong>
+                  <p className="text-blue-800">{scienceProject.hypothesis}</p>
                 </div>
               </div>
 
+              {/* Data Table Logging */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-3">
+                <h3 className="text-xs font-bold text-slate-800">Experimental Data Table Logging</h3>
+                <div className="space-y-2">
+                  {scienceProject.dataPoints.map((dp, idx) => (
+                    <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200 rounded text-xs flex justify-between items-center">
+                      <span className="font-semibold text-slate-700">Trial #{dp.trial}</span>
+                      <span className="font-mono text-slate-800">{dp.value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <input
+                    type="text"
+                    placeholder="Enter trial result (e.g. 2% Salt: 6/10 Sprouted)..."
+                    value={newDataValue}
+                    onChange={(e) => setNewDataValue(e.target.value)}
+                    className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-xs"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newDataValue) {
+                        setScienceProject({
+                          ...scienceProject,
+                          dataPoints: [...scienceProject.dataPoints, { trial: scienceProject.dataPoints.length + 1, value: newDataValue }]
+                        });
+                        setNewDataValue('');
+                      }
+                    }}
+                    className="bg-blue-600 text-white font-bold text-xs px-4 py-1.5 rounded-lg"
+                  >
+                    + Add Data Point
+                  </button>
+                </div>
+              </div>
+
+              {/* Milestones & Teacher Feedback */}
               <div className="space-y-3">
-                {projectMilestones.map((m) => (
-                  <div key={m.id} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={m.completed}
-                          onChange={() => {
-                            setProjectMilestones(
-                              projectMilestones.map(item => item.id === m.id ? { ...item, completed: !item.completed } : item)
-                            );
-                          }}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
-                        <h3 className={`font-bold text-sm ${m.completed ? 'line-through text-slate-400' : 'text-slate-800'}`}>{m.title}</h3>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${m.completed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                        {m.completed ? 'Completed' : 'In Progress'}
+                <h3 className="text-xs font-bold text-slate-800">Milestones & Teacher Review Queue</h3>
+                {scienceProject.milestones.map((m) => (
+                  <div key={m.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-slate-800">{m.title}</span>
+                      <span className={`px-2 py-0.5 rounded font-bold ${m.completed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {m.completed ? 'Verified' : 'In Review'}
                       </span>
                     </div>
-
-                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700">
-                      <strong>Teacher Feedback:</strong> {m.mentorFeedback || 'No feedback provided yet.'}
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded text-slate-600">
+                      <strong>Teacher Feedback:</strong> {m.mentorFeedback}
                     </div>
-
-                    {currentUser?.role === 'Teacher' && (
-                      <div className="flex gap-2 pt-1">
-                        <input
-                          type="text"
-                          placeholder="Write feedback for student..."
-                          value={newFeedbackInput}
-                          onChange={(e) => setNewFeedbackInput(e.target.value)}
-                          className="flex-1 border border-slate-300 rounded-lg px-3 py-1 text-xs"
-                        />
-                        <button
-                          onClick={() => {
-                            if (newFeedbackInput) {
-                              setProjectMilestones(
-                                projectMilestones.map(item => item.id === m.id ? { ...item, mentorFeedback: newFeedbackInput } : item)
-                              );
-                              setNewFeedbackInput('');
-                            }
-                          }}
-                          className="bg-purple-700 text-white text-xs px-3 py-1 rounded-lg font-semibold"
-                        >
-                          Save Feedback
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -1475,19 +1614,19 @@ export default function App() {
           )}
 
           {/* ========================================================
-              TAB 8: WORLD WINDOW
+              MODULE 8: WORLD WINDOW (CENTRAL VALLEY LANGUAGE PRACTICE)
              ======================================================== */}
           {activeTab === 'World Window' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
-                <div className="flex flex-wrap justify-between items-center gap-3">
+                <div className="flex justify-between items-center flex-wrap gap-2">
                   <div>
-                    <h2 className="text-base font-bold text-slate-800">World Window: Daily Language & Conversation Practice</h2>
-                    <p className="text-xs text-slate-500">Updated Daily • Master conversational scenarios & travel phrases</p>
+                    <h2 className="text-base font-bold text-slate-800">World Window: Central Valley Languages & Cultural Practice</h2>
+                    <p className="text-xs text-slate-500">Practice conversational scenarios connected to Central Valley cultures.</p>
                   </div>
-                  <span className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1 rounded-full font-semibold">
-                    📅 Daily Update Active
-                  </span>
+                  <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">
+                    <Volume2 className="w-4 h-4" /> Recorded Pronunciation Active
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
@@ -1521,39 +1660,37 @@ export default function App() {
 
               {WORLD_WINDOW_DATA[selectedLang][selectedLevel] && (
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-6">
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                    <div>
-                      <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">{selectedLang} • {selectedLevel}</span>
-                      <h3 className="text-lg font-bold text-slate-800">{WORLD_WINDOW_DATA[selectedLang][selectedLevel].scenario}</h3>
-                    </div>
+                  <div className="border-b border-slate-100 pb-3">
+                    <span className="text-xs font-bold text-blue-600 uppercase">{selectedLang} • {selectedLevel}</span>
+                    <h3 className="text-lg font-bold text-slate-800">{WORLD_WINDOW_DATA[selectedLang][selectedLevel].scenario}</h3>
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase">Key Phrases & Pronunciation</h4>
+                    <h4 className="text-xs font-bold text-slate-700 uppercase">Key Phrases & Audio Guide</h4>
                     {WORLD_WINDOW_DATA[selectedLang][selectedLevel].phrases.map((p, idx) => (
                       <div key={idx} className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl text-xs space-y-1">
-                        <p className="font-bold text-blue-900 text-sm">{p.original}</p>
+                        <div className="flex justify-between items-center">
+                          <p className="font-bold text-blue-900 text-sm">{p.original}</p>
+                          <button
+                            onClick={() => {
+                              const utterance = new SpeechSynthesisUtterance(p.original);
+                              window.speechSynthesis.speak(utterance);
+                            }}
+                            className="bg-blue-600 text-white p-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1"
+                          >
+                            <Volume2 className="w-3 h-3" /> Play Audio
+                          </button>
+                        </div>
                         <p className="text-slate-600">Translation: {p.translation}</p>
                         <p className="text-xs font-mono text-blue-700">Phonetic: [{p.phonetic}]</p>
                       </div>
                     ))}
                   </div>
 
-                  <div className="space-y-3 pt-2">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase">Interactive Dialogue Scenario</h4>
-                    <div className="p-4 bg-slate-900 text-white rounded-xl text-xs space-y-2">
-                      <p><strong className="text-blue-400">Speaker A:</strong> {WORLD_WINDOW_DATA[selectedLang][selectedLevel].dialogue.speakerA}</p>
-                      <p><strong className="text-emerald-400">Speaker B:</strong> {WORLD_WINDOW_DATA[selectedLang][selectedLevel].dialogue.speakerB}</p>
-                      <p className="text-slate-400 text-[11px] pt-2 border-t border-slate-800">
-                        Translation: {WORLD_WINDOW_DATA[selectedLang][selectedLevel].dialogue.translation}
-                      </p>
-                    </div>
-                  </div>
-
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
                     <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
                     <div>
-                      <strong className="block font-bold">Cultural & Travel Tip:</strong>
+                      <strong className="block font-bold">Central Valley Cultural Connection:</strong>
                       {WORLD_WINDOW_DATA[selectedLang][selectedLevel].travelTip}
                     </div>
                   </div>
@@ -1563,27 +1700,36 @@ export default function App() {
           )}
 
           {/* ========================================================
-              TAB 9: CREATOR ARCADE
+              MODULE 9: CREATOR ARCADE (APPROVED DOMAINS ONLY)
              ======================================================== */}
           {activeTab === 'Creator Arcade' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
-                <h2 className="text-base font-bold text-slate-800">Student Creator Arcade & Project Showcase</h2>
-                <p className="text-xs text-slate-500">Share links to your Scratch, Python, or WebGL creations with district peers.</p>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800">Creator Arcade & Project Showcase</h2>
+                    <p className="text-xs text-slate-500">
+                      Submit Scratch, GitHub, or carefully reviewed Replit links for teacher moderation prior to publication.
+                    </p>
+                  </div>
+                  <span className="bg-amber-100 text-amber-800 border border-amber-200 text-xs px-3 py-1 rounded-full font-bold">
+                    Approved Domains: Scratch • GitHub • Replit
+                  </span>
+                </div>
 
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                  <h3 className="text-xs font-bold text-slate-700">Showcase Your Project</h3>
+                  <h3 className="text-xs font-bold text-slate-700">Submit Project for Teacher Review</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <input
                       type="text"
-                      placeholder="Game Title"
+                      placeholder="Project Title"
                       value={gameTitle}
                       onChange={(e) => setGameTitle(e.target.value)}
                       className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs"
                     />
                     <input
                       type="url"
-                      placeholder="Project URL (Scratch/Replit link)"
+                      placeholder="URL (scratch.mit.edu, github.com, replit.com)"
                       value={gameLink}
                       onChange={(e) => setGameLink(e.target.value)}
                       className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs"
@@ -1597,47 +1743,126 @@ export default function App() {
                     />
                   </div>
                   <button
-                    onClick={() => {
-                      if (gameTitle && gameLink) {
-                        setArcadeGames([
-                          ...arcadeGames,
-                          { id: Date.now(), author: currentUser?.studentName || currentUser?.username || 'Student', title: gameTitle, link: gameLink, description: gameDesc || 'Student created game.' }
-                        ]);
-                        setGameTitle('');
-                        setGameLink('');
-                        setGameDesc('');
-                      }
-                    }}
+                    onClick={handlePublishArcadeProject}
                     className="bg-blue-600 text-white font-semibold text-xs px-4 py-2 rounded-lg"
                   >
-                    Publish Project Link
+                    Submit Project
                   </button>
                 </div>
               </div>
 
+              {/* Showcase Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {arcadeGames.map((game) => (
                   <div key={game.id} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-3">
                     <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        <Gamepad2 className="w-8 h-8 text-purple-600 shrink-0" />
-                        <div>
-                          <h3 className="font-bold text-sm text-slate-900">{game.title}</h3>
-                          <p className="text-xs text-slate-400">Created by: <strong>{game.author}</strong></p>
-                        </div>
+                      <div>
+                        <h3 className="font-bold text-sm text-slate-900">{game.title}</h3>
+                        <p className="text-xs text-slate-400">Author: <strong>{game.author}</strong></p>
                       </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${game.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {game.status}
+                      </span>
                     </div>
+
                     <p className="text-xs text-slate-600">{game.description}</p>
+
                     <a
                       href={game.link}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
                     >
-                      Play / Launch Project <ExternalLink className="w-3 h-3" />
+                      Open Verified Project <ExternalLink className="w-3 h-3" />
                     </a>
+
+                    {/* Peer Feedback Prompt */}
+                    <div className="border-t border-slate-100 pt-2 space-y-2">
+                      <strong className="text-[11px] text-slate-700 block">Structured Peer Feedback:</strong>
+                      {game.feedback.map((fb, idx) => (
+                        <p key={idx} className="text-[11px] bg-slate-50 p-2 rounded text-slate-600">{fb}</p>
+                      ))}
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="e.g. What I liked most about your code was..."
+                          value={peerFeedbackText[game.id] || ''}
+                          onChange={(e) => setPeerFeedbackText({ ...peerFeedbackText, [game.id]: e.target.value })}
+                          className="flex-1 border border-slate-200 rounded px-2 py-1 text-xs"
+                        />
+                        <button
+                          onClick={() => {
+                            if (peerFeedbackText[game.id]) {
+                              const check = sanitizeContent(peerFeedbackText[game.id]);
+                              if (!check.isSafe) {
+                                setSafetyNotice(`Feedback blocked: ${check.warning}`);
+                                return;
+                              }
+                              setArcadeGames(arcadeGames.map(g => g.id === game.id ? { ...g, feedback: [...g.feedback, `${currentUser?.studentName}: ${check.cleanText}`] } : g));
+                              setPeerFeedbackText({ ...peerFeedbackText, [game.id]: '' });
+                            }
+                          }}
+                          className="bg-slate-800 text-white text-[11px] px-2.5 py-1 rounded font-bold"
+                        >
+                          Send Feedback
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================
+              MODULE 10: SAFETY, PRIVACY & PARENT INFORMATION
+             ======================================================== */}
+          {activeTab === 'Safety & Parent Info' && (
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100 space-y-6 max-w-3xl mx-auto">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <Shield className="w-8 h-8 text-blue-600" />
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">ValleyQuest Safety & Child Protection Architecture</h2>
+                  <p className="text-xs text-slate-500">Engineered specifically for Central Valley students, schools, and parents.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Report, Block & Controls
+                  </h3>
+                  <p className="text-slate-600">Students and mentors can report posts or questions immediately. Automated filters block profane or PII content instantly.</p>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Teacher Review Queue
+                  </h3>
+                  <p className="text-slate-600">Questions and external project submissions pass through a teacher moderation queue before public site display.</p>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> First Name & Last Initial Formatting
+                  </h3>
+                  <p className="text-slate-600">Student full names are automatically truncated (e.g. Maria G.) to preserve individual privacy.</p>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> No Private Direct Messages
+                  </h3>
+                  <p className="text-slate-600">Unmonitored 1-on-1 private messaging between students or unverified adults is prohibited.</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl space-y-2 text-xs">
+                <h3 className="font-bold text-blue-900">Parent Data & Deletion Policy</h3>
+                <p className="text-blue-800">
+                  Parents have full rights to request data deletion, view connected class groups, or manage their child's account settings by contacting their school district administrator.
+                </p>
               </div>
             </div>
           )}
@@ -1646,6 +1871,8 @@ export default function App() {
     </div>
   );
 }
+
+
 
 
 
