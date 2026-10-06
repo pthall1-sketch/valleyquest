@@ -147,4 +147,6 @@ const getDefaultLocationData = (zip: string): LocationContext => ({
   districtAnnouncements: [],
 });
 
-export default App;
+export default function App() {
+  // your main component JSX code here
+}
