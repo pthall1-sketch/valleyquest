@@ -66,7 +66,7 @@ interface LocationInfo {
   heatAlert: string | null;
   fogAlert: string | null;
   libraries: string[];
-  eventsUrl: string;
+  aqiSourceUrl: string;
   aqiSource: string;
   aqiUpdatedAt: string;
   trafficAlert: string | null;
@@ -88,7 +88,7 @@ interface KernOpportunity {
 interface UserAccount {
   username: string;
   studentName: string;
-  role: 'Student' | 'Teacher';
+  role: 'Student' | 'Teacher' | 'Judge Demo';
   code: string;
   joinedBuddies: Array<{ name: string; code: string; role: string }>;
   isVerifiedTeacher?: boolean;
@@ -125,7 +125,7 @@ interface ArcadeGame {
 }
 
 interface DailyLogEntry {
-  dateStr: string; // e.g., '2026-10-06'
+  dateStr: string;
   dayNum: number;
   waterCount: number;
   stepCount: number;
@@ -185,7 +185,6 @@ const formatFirstAndLastInitial = (fullName: string): string => {
   return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.`;
 };
 
-// Helper to generate current date string
 const getFormattedCurrentDate = (): string => {
   const options: Intl.DateTimeFormatOptions = {
     weekday: 'long',
@@ -196,15 +195,10 @@ const getFormattedCurrentDate = (): string => {
   return new Date().toLocaleDateString('en-US', options);
 };
 
-// Initial Month Daily Logs Helper (October 2026 context)
 const generateInitialMonthlyLogs = (): Record<string, DailyLogEntry> => {
   const logs: Record<string, DailyLogEntry> = {};
-  const year = 2026;
-  const month = 10; // October
-
   for (let day = 1; day <= 31; day++) {
     const dateKey = `2026-10-${day < 10 ? '0' + day : day}`;
-    // Pre-populate past days with realistic demo metrics
     if (day < 6) {
       logs[dateKey] = {
         dateStr: dateKey,
@@ -241,7 +235,7 @@ const generateInitialMonthlyLogs = (): Record<string, DailyLogEntry> => {
 };
 
 // ==========================================
-// LOCATION & DISTRICT DATA
+// LOCATION & DISTRICT DATA WITH FIXED AQI LINKS
 // ==========================================
 const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
   '93301': {
@@ -256,9 +250,9 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: 'Excessive Heat Warning in effect until 8 PM.',
     fogAlert: 'Dense Tule Fog Advisory in early morning hours.',
     libraries: ['Beale Memorial Library (Bakersfield)', 'Baker Branch Library'],
-    eventsUrl: 'https://kern.org/student-events/',
-    aqiSource: 'San Joaquin Valley Air Pollution Control District Feeds',
-    aqiUpdatedAt: 'Today, 1:15 PM PDT',
+    aqiSourceUrl: 'https://www.valleyair.org/',
+    aqiSource: 'San Joaquin Valley Air Pollution Control District (ValleyAir.org)',
+    aqiUpdatedAt: 'Demonstration data based on representative Central Valley conditions',
     trafficAlert: 'Caltrans Advisory: Minor construction delays on CA-99 near SR-58.'
   },
   '93311': {
@@ -273,9 +267,9 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: 'Heat Advisory active for Kern River Valley.',
     fogAlert: null,
     libraries: ['Southwest Branch Library (Bakersfield)', 'Beale Memorial Library'],
-    eventsUrl: 'https://kern.org/student-events/',
-    aqiSource: 'San Joaquin Valley Air Pollution Control District Feeds',
-    aqiUpdatedAt: 'Today, 1:10 PM PDT',
+    aqiSourceUrl: 'https://www.airnow.gov/',
+    aqiSource: 'AirNow Federal & San Joaquin Valley Air District Feed',
+    aqiUpdatedAt: 'Demonstration data based on representative Central Valley conditions',
     trafficAlert: 'Flowing smoothly on Stockdale Hwy & Westside Pkwy.'
   },
   '93721': {
@@ -290,9 +284,9 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: 'Extreme Heat Warning: Limit outdoor activities 12 PM - 6 PM.',
     fogAlert: null,
     libraries: ['Fresno County Public Library (Central)', 'Politi Branch Library'],
-    eventsUrl: 'https://www.fcoe.org/',
-    aqiSource: 'Fresno Unified Air Feeds',
-    aqiUpdatedAt: 'Today, 1:00 PM PDT',
+    aqiSourceUrl: 'https://www.valleyair.org/',
+    aqiSource: 'San Joaquin Valley Air Pollution Control District Feed',
+    aqiUpdatedAt: 'Demonstration data based on representative Central Valley conditions',
     trafficAlert: 'Heavy congestion reported on CA-41 North.'
   },
   '95202': {
@@ -307,9 +301,9 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: null,
     fogAlert: 'Patchy morning fog impacting Valley commuters.',
     libraries: ['Cesar Chavez Central Library (Stockton)', 'Maya Angelou Library'],
-    eventsUrl: 'https://www.sjcoe.org/services-and-support/studentevents',
-    aqiSource: 'San Joaquin Air District Feeds',
-    aqiUpdatedAt: 'Today, 1:12 PM PDT',
+    aqiSourceUrl: 'https://www.valleyair.org/',
+    aqiSource: 'San Joaquin Air District Feed',
+    aqiUpdatedAt: 'Demonstration data based on representative Central Valley conditions',
     trafficAlert: 'Patchy fog advisory on I-5 South.'
   },
   '95350': {
@@ -324,9 +318,9 @@ const CENTRAL_VALLEY_DATA: Record<string, LocationInfo> = {
     heatAlert: null,
     fogAlert: null,
     libraries: ['Modesto Library (Stanislaus County)', 'Salida Regional Library'],
-    eventsUrl: 'https://www.stancoe.org/',
-    aqiSource: 'Stanislaus County Environmental API',
-    aqiUpdatedAt: 'Today, 1:05 PM PDT',
+    aqiSourceUrl: 'https://www.valleyair.org/',
+    aqiSource: 'San Joaquin Valley Air Pollution Control District Feed',
+    aqiUpdatedAt: 'Demonstration data based on representative Central Valley conditions',
     trafficAlert: 'Normal traffic flow on Hwy 99.'
   }
 };
@@ -343,14 +337,14 @@ const DEFAULT_LOCATION: LocationInfo = {
   heatAlert: null,
   fogAlert: null,
   libraries: ['Central Valley Public Library System'],
-  eventsUrl: 'https://kern.org/student-events/',
-  aqiSource: 'Official Valley Weather Feed',
-  aqiUpdatedAt: 'Today, 1:00 PM PDT',
+  aqiSourceUrl: 'https://www.valleyair.org/',
+  aqiSource: 'San Joaquin Valley Air Pollution Control District Feed',
+  aqiUpdatedAt: 'Demonstration data based on representative Central Valley conditions',
   trafficAlert: 'Normal road traffic conditions.'
 };
 
 // ==========================================
-// REGIONAL OPPORTUNITIES (ACTIONABLE DATA)
+// REGIONAL OPPORTUNITIES WITH VERIFIED URLS
 // ==========================================
 const ALL_OPPORTUNITIES: KernOpportunity[] = [
   {
@@ -362,7 +356,7 @@ const ALL_OPPORTUNITIES: KernOpportunity[] = [
     deadline: 'February 15, 2027',
     eligibleGrades: 'Grades 4–12',
     location: 'Mechanics Bank Convention Center, Bakersfield',
-    officialSourceUrl: 'https://kern.org/student-events/science-fair/',
+    officialSourceUrl: 'https://kern.org/',
     verifiedOn: 'October 1, 2026'
   },
   {
@@ -374,7 +368,7 @@ const ALL_OPPORTUNITIES: KernOpportunity[] = [
     deadline: 'March 30, 2027',
     eligibleGrades: 'Grades 6–12',
     location: 'Kern County Superintendent of Schools (KCSOS)',
-    officialSourceUrl: 'https://kern.org/student-events/skoolcade/',
+    officialSourceUrl: 'https://kern.org/',
     verifiedOn: 'October 2, 2026'
   },
   {
@@ -386,7 +380,7 @@ const ALL_OPPORTUNITIES: KernOpportunity[] = [
     deadline: 'April 10, 2027',
     eligibleGrades: 'Grades 6–8',
     location: 'Liberty High School, Bakersfield',
-    officialSourceUrl: 'https://kern.org/student-events/steam-olympiad/',
+    officialSourceUrl: 'https://kern.org/',
     verifiedOn: 'October 4, 2026'
   },
   {
@@ -398,7 +392,7 @@ const ALL_OPPORTUNITIES: KernOpportunity[] = [
     deadline: 'January 15, 2027',
     eligibleGrades: 'Grades 7–12',
     location: 'Kern County Museum, Bakersfield',
-    officialSourceUrl: 'https://kern.org/student-events/essay-contest/',
+    officialSourceUrl: 'https://kern.org/',
     verifiedOn: 'September 28, 2026'
   },
   {
@@ -434,7 +428,7 @@ const ALL_OPPORTUNITIES: KernOpportunity[] = [
     deadline: 'February 10, 2027',
     eligibleGrades: 'Grades 6–12',
     location: 'SJCOE Wentworth Education Center, Stockton',
-    officialSourceUrl: 'https://www.sjcoe.org/services-and-support/studentevents',
+    officialSourceUrl: 'https://www.sjcoe.org/',
     verifiedOn: 'October 1, 2026'
   },
   {
@@ -446,7 +440,7 @@ const ALL_OPPORTUNITIES: KernOpportunity[] = [
     deadline: 'April 1, 2027',
     eligibleGrades: 'Grades 8–12',
     location: 'University of the Pacific, Stockton',
-    officialSourceUrl: 'https://www.sjcoe.org/services-and-support/studentevents',
+    officialSourceUrl: 'https://www.sjcoe.org/',
     verifiedOn: 'September 30, 2026'
   },
   {
@@ -659,6 +653,7 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [isJudgeDemo, setIsJudgeDemo] = useState<boolean>(false);
 
   // App Navigation
   const [activeTab, setActiveTab] = useState<string>('Safe-Day Dashboard');
@@ -674,7 +669,6 @@ export default function App() {
   const [newActivityTitle, setNewActivityTitle] = useState('');
   const [newActivityTime, setNewActivityTime] = useState('');
 
-  // Current day log shortcut
   const currentDayLog = monthlyLogs[selectedDayKey] || {
     dateStr: selectedDayKey,
     dayNum: parseInt(selectedDayKey.split('-')[2]),
@@ -687,7 +681,6 @@ export default function App() {
     booksRead: 0
   };
 
-  // Helper to update current day metrics
   const updateCurrentDayLog = (fieldsToUpdate: Partial<DailyLogEntry>) => {
     setMonthlyLogs(prev => ({
       ...prev,
@@ -698,7 +691,6 @@ export default function App() {
     }));
   };
 
-  // Calculate Monthly Running Averages up to current active logged days
   const loggedDaysList = Object.values(monthlyLogs).filter(d => d.dayNum <= parseInt(selectedDayKey.split('-')[2]));
   const loggedDaysCount = loggedDaysList.length || 1;
   const avgWater = (loggedDaysList.reduce((acc, d) => acc + d.waterCount, 0) / loggedDaysCount).toFixed(1);
@@ -738,11 +730,10 @@ export default function App() {
   });
   const [newDataValue, setNewDataValue] = useState('');
 
-  // Reading Tracker State
-  const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>('All Ages');
+  // Reading Tracker State - Default to Middle School Ages 9-12
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>('Ages 9–12');
   const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
   const [searchBookTerm, setSearchBookTerm] = useState<string>('');
-  const [readingGoalMins, setReadingGoalMins] = useState<number>(300);
 
   // STEM Board Reminders State
   const [reminders, setReminders] = useState<number[]>([]);
@@ -763,19 +754,19 @@ export default function App() {
 
   const currentLocation = CENTRAL_VALLEY_DATA[zipCode] || DEFAULT_LOCATION;
 
-  // Dynamically filter opportunities based on selected zip code/county
   const activeOpportunities = ALL_OPPORTUNITIES.filter(
     (opp) => opp.county === currentLocation.county
   );
 
-  // Judge Demo Trigger
+  // Judge Demo Trigger with Temporary Reset State
   const handleTriggerJudgeDemo = () => {
+    setIsJudgeDemo(true);
     const demoUser: UserAccount = {
       username: 'judge_demo',
       studentName: 'Judge Evaluator',
-      role: 'Teacher',
+      role: 'Judge Demo',
       code: 'CV-999000',
-      joinedBuddies: [{ name: 'Alex M.', code: 'CV-102938', role: 'Student' }],
+      joinedBuddies: [{ name: 'Alex M.', code: 'CV-102938', role: 'Peer' }],
       isVerifiedTeacher: true
     };
     setCurrentUser(demoUser);
@@ -801,12 +792,20 @@ export default function App() {
       ]
     });
     setIsLoggedIn(true);
-    setSafetyNotice('Logged in under One-Click Judge Demo mode. Daily tracking and monthly averages pre-loaded.');
+    setSafetyNotice('Logged in under One-Click Judge Demo mode. All changes are temporary and reset upon sign out.');
+  };
+
+  const handleSignOut = () => {
+    setIsLoggedIn(false);
+    setIsJudgeDemo(false);
+    setCurrentUser(null);
+    setMonthlyLogs(generateInitialMonthlyLogs());
   };
 
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
+    setIsJudgeDemo(false);
 
     if (authMode === 'signup') {
       if (!studentNameInput.trim() || !usernameInput.trim() || !passwordInput) {
@@ -958,7 +957,7 @@ export default function App() {
             >
               <Sparkles className="w-4 h-4" /> Try Judge Demo — No Account Required
             </button>
-            <p className="text-[10px] text-slate-400">Preloaded with weather feeds, daily logs & monthly averages</p>
+            <p className="text-[10px] text-slate-400">Preloaded with weather feeds, daily logs & monthly averages. All changes are temporary.</p>
           </div>
 
           <div className="relative flex py-1 items-center">
@@ -1078,7 +1077,7 @@ export default function App() {
           <div className="px-6 flex items-center justify-between">
             <span className="font-bold text-sm text-blue-400 tracking-wider uppercase">ValleyQuest</span>
             <span className="text-[10px] bg-blue-900 text-blue-300 px-2 py-0.5 rounded font-mono font-bold">
-              {currentUser?.role}
+              {isJudgeDemo ? 'VALLEYQUEST Judge Demo' : currentUser?.role}
             </span>
           </div>
 
@@ -1109,7 +1108,7 @@ export default function App() {
             <p className="text-blue-400 font-mono text-[11px]">Class Code: {currentUser?.code}</p>
           </div>
           <button
-            onClick={() => setIsLoggedIn(false)}
+            onClick={handleSignOut}
             title="Sign Out"
             className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
           >
@@ -1158,7 +1157,6 @@ export default function App() {
         )}
 
         <main className="p-8 max-w-6xl w-full mx-auto space-y-6">
-          {/* Core App Purpose Banner */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">
@@ -1184,10 +1182,9 @@ export default function App() {
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200 pb-3">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-800">Safe-Day Real-Time Environmental Dashboard</h2>
-                  <p className="text-xs text-slate-500">Real-time local conditions and protective measures for Central Valley outdoor activities.</p>
+                  <h2 className="text-lg font-bold text-slate-800">Safe-Day Environmental Dashboard</h2>
+                  <p className="text-xs text-slate-500">Demonstration data and protective measures for Central Valley outdoor activities.</p>
                 </div>
-                {/* TODAY'S DATE BADGE */}
                 <div className="bg-blue-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm shrink-0">
                   <Calendar className="w-4 h-4 text-blue-300" />
                   <div>
@@ -1198,7 +1195,7 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Real-time AQI & Weather Card */}
+                {/* AQI Card with Fixed Official Source Link */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
@@ -1219,10 +1216,15 @@ export default function App() {
 
                   <div className="border-t border-slate-100 pt-3 text-[11px] text-slate-500 space-y-1">
                     <p><strong>Source Feed:</strong> {currentLocation.aqiSource}</p>
-                    <p className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" /> <strong>Updated at:</strong> {currentLocation.aqiUpdatedAt}</p>
+                    <p className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" /> <strong>Status:</strong> <span className="italic text-slate-600 font-medium">{currentLocation.aqiUpdatedAt}</span></p>
                     <p><strong>Current Location:</strong> {currentLocation.city}, {currentLocation.county}</p>
-                    <a href={currentLocation.eventsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-600 font-bold hover:underline pt-1">
-                      Official Air Quality & Alert Feeds <ExternalLink className="w-3 h-3" />
+                    <a
+                      href={currentLocation.aqiSourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-600 font-bold hover:underline pt-1"
+                    >
+                      Official Air District & AirNow Feeds <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
                 </div>
@@ -1237,7 +1239,7 @@ export default function App() {
                     {currentLocation.trafficAlert}
                   </p>
                   <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
-                    <strong>Source:</strong> Caltrans District 6 Road Conditions • <strong>Updated:</strong> Today, 1:10 PM PDT
+                    <strong>Source:</strong> Caltrans District 6 Road Conditions • <span className="italic">Demonstration Feed</span>
                   </div>
                 </div>
               </div>
@@ -1358,10 +1360,9 @@ export default function App() {
             </div>
           )}
 
-          {/* MODULE 3: ACTIVITY & WELLBEING WITH DAILY LOGS & MONTHLY AVERAGES */}
+          {/* MODULE 3: ACTIVITY & WELLBEING */}
           {activeTab === 'Activity & Wellbeing' && (
             <div className="space-y-6">
-              {/* Day Selection Bar & Automatic Daily Reset Controls */}
               <div className="bg-slate-900 text-white p-4 rounded-xl border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
@@ -1392,7 +1393,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Day Quick Navigation Strip */}
                 <div className="flex gap-1.5 overflow-x-auto pt-1 pb-1">
                   {Object.keys(monthlyLogs).map((key) => {
                     const dayNum = parseInt(key.split('-')[2]);
@@ -1413,7 +1413,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Subtab Navigation */}
               <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 flex-wrap">
                 <button
                   onClick={() => setActiveWellbeingTab('water')}
@@ -1609,10 +1608,8 @@ export default function App() {
                 </div>
               )}
 
-              {/* MONTHLY AVERAGES & HISTORY LOG VIEW */}
               {activeWellbeingTab === 'monthly_averages' && (
                 <div className="space-y-6">
-                  {/* Monthly Running Average Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-1">
                       <span className="text-[11px] font-bold text-slate-400 uppercase">Monthly Avg Water / Day</span>
@@ -1633,7 +1630,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Daily Log Table until Month End */}
                   <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 space-y-4">
                     <h3 className="text-sm font-bold text-slate-800">October 2026 Daily Log History (Month-End View)</h3>
                     <div className="overflow-x-auto">
@@ -1784,7 +1780,7 @@ export default function App() {
             </div>
           )}
 
-          {/* MODULE 5: READING TRACKER WITH DAILY LOGS & MONTHLY AVERAGES */}
+          {/* MODULE 5: READING TRACKER (Defaults to Ages 9-12) */}
           {activeTab === 'Reading Tracker' && (
             <div className="space-y-6">
               <div className="bg-slate-900 text-white p-4 rounded-xl border border-slate-800 flex justify-between items-center flex-wrap gap-2">
@@ -1837,17 +1833,20 @@ export default function App() {
 
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
                 <div className="flex justify-between items-center flex-wrap gap-2">
-                  <h2 className="text-base font-bold text-slate-800">Curated Reading Recommendations</h2>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800">Curated Reading Recommendations</h2>
+                    <p className="text-xs text-slate-400">Defaulted to Middle School (Ages 9–12) per ValleyQuest student audience.</p>
+                  </div>
                   <div className="flex gap-2">
                     <select
                       value={selectedAgeGroup}
                       onChange={(e) => setSelectedAgeGroup(e.target.value)}
-                      className="border border-slate-300 rounded-lg px-2 py-1 text-xs bg-white"
+                      className="border border-slate-300 rounded-lg px-2 py-1 text-xs bg-white font-bold text-blue-600"
                     >
                       <option value="All Ages">All Ages</option>
                       <option value="Ages 2–5">Ages 2–5</option>
                       <option value="Ages 6–8">Ages 6–8</option>
-                      <option value="Ages 9–12">Ages 9–12</option>
+                      <option value="Ages 9–12">Ages 9–12 (Default)</option>
                       <option value="Ages 13–18">Ages 13–18</option>
                     </select>
                     <select
@@ -1900,7 +1899,7 @@ export default function App() {
                     {currentLocation.district} ({currentLocation.county}) STEM Opportunities Board
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Comprehensive local competitions with grade eligibility, deadlines, locations, and direct verified official links.
+                    Comprehensive local competitions with verified official source URLs.
                   </p>
                 </div>
                 <div className="bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg text-right">
@@ -1923,47 +1922,39 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {activeOpportunities.length > 0 ? (
-                      activeOpportunities.map((opp) => (
-                        <tr key={opp.id} className="even:bg-slate-50 hover:bg-slate-100 transition-colors">
-                          <td className="p-3 border border-slate-200 font-bold text-slate-900">{opp.name}</td>
-                          <td className="p-3 border border-slate-200">
-                            <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[11px] font-semibold">{opp.category}</span>
-                          </td>
-                          <td className="p-3 border border-slate-200 font-bold text-red-600">{opp.deadline}</td>
-                          <td className="p-3 border border-slate-200 font-semibold text-slate-700">{opp.eventDate}</td>
-                          <td className="p-3 border border-slate-200 font-medium text-slate-600">{opp.eligibleGrades}</td>
-                          <td className="p-3 border border-slate-200 text-slate-600">{opp.location}</td>
-                          <td className="p-3 border border-slate-200 text-center space-y-1">
-                            <a
-                              href={opp.officialSourceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-[11px] font-bold"
+                    {activeOpportunities.map((opp) => (
+                      <tr key={opp.id} className="even:bg-slate-50 hover:bg-slate-100 transition-colors">
+                        <td className="p-3 border border-slate-200 font-bold text-slate-900">{opp.name}</td>
+                        <td className="p-3 border border-slate-200">
+                          <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[11px] font-semibold">{opp.category}</span>
+                        </td>
+                        <td className="p-3 border border-slate-200 font-bold text-red-600">{opp.deadline}</td>
+                        <td className="p-3 border border-slate-200 font-semibold text-slate-700">{opp.eventDate}</td>
+                        <td className="p-3 border border-slate-200 font-medium text-slate-600">{opp.eligibleGrades}</td>
+                        <td className="p-3 border border-slate-200 text-slate-600">{opp.location}</td>
+                        <td className="p-3 border border-slate-200 text-center space-y-1">
+                          <a
+                            href={opp.officialSourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-[11px] font-bold"
+                          >
+                            Verified Link <ExternalLink className="w-3 h-3" />
+                          </a>
+                          <div>
+                            <button
+                              onClick={() => toggleReminder(opp.id)}
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-colors ${
+                                reminders.includes(opp.id) ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-600'
+                              }`}
                             >
-                              Source Link <ExternalLink className="w-3 h-3" />
-                            </a>
-                            <div>
-                              <button
-                                onClick={() => toggleReminder(opp.id)}
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-colors ${
-                                  reminders.includes(opp.id) ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-600'
-                                }`}
-                              >
-                                {reminders.includes(opp.id) ? '✓ Reminder Set' : '+ Add Reminder'}
-                              </button>
-                            </div>
-                            <p className="text-[9px] text-slate-400">Verified on {opp.verifiedOn}</p>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="p-4 text-center text-slate-500 italic">
-                          No STEM events listed for {currentLocation.county} yet.
+                              {reminders.includes(opp.id) ? '✓ Reminder Set' : '+ Add Reminder'}
+                            </button>
+                          </div>
+                          <p className="text-[9px] text-slate-400">Verified on {opp.verifiedOn}</p>
                         </td>
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -2297,13 +2288,13 @@ export default function App() {
             </div>
           )}
 
-          {/* MODULE 10: SAFETY, PRIVACY & PARENT INFORMATION */}
+          {/* MODULE 10: SAFETY, PRIVACY & DATA MANAGEMENT */}
           {activeTab === 'Safety & Parent Info' && (
             <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100 space-y-6 max-w-3xl mx-auto">
               <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                 <Shield className="w-8 h-8 text-blue-600" />
                 <div>
-                  <h2 className="text-lg font-bold text-slate-800">Safety, Child Privacy & Protection Policies</h2>
+                  <h2 className="text-lg font-bold text-slate-800">Safety, Child Privacy & Data Management Policies</h2>
                   <p className="text-xs text-slate-500">Designed with strict minor safety protections for Central Valley school environments.</p>
                 </div>
               </div>
@@ -2315,18 +2306,28 @@ export default function App() {
                 </div>
 
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                  <h3 className="font-bold text-slate-800 text-sm">2. No Unrestricted Direct Messaging</h3>
-                  <p>ValleyQuest disables private direct messaging between students to prevent potential harassment. All interaction occurs within moderated public subject queues.</p>
+                  <h3 className="font-bold text-slate-800 text-sm">2. What Student Data Is Stored</h3>
+                  <p>ValleyQuest stores only pseudonymous user preferences, daily wellness tracker counts (water glasses, steps, reading minutes), and moderated study group homework questions.</p>
                 </div>
 
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                  <h3 className="font-bold text-slate-800 text-sm">3. Domain Safety Boundary</h3>
-                  <p>External links submitted in Creator Arcade are restricted strictly to pre-approved educational domains (Scratch, GitHub, Replit).</p>
+                  <h3 className="font-bold text-slate-800 text-sm">3. Data Retention & Deletion Requests</h3>
+                  <p>All student records and daily logs are retained for the active academic school year (maximum 10 months). Parents can request immediate data purging and account deletion at any time by contacting school district administration or via the parent portal settings.</p>
                 </div>
 
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                  <h3 className="font-bold text-slate-800 text-sm">4. Mandatory Content Moderation</h3>
-                  <p>All student project submissions and study questions pass through an automated keyword and PII filter before entering teacher review queues.</p>
+                  <h3 className="font-bold text-slate-800 text-sm">4. Third-Party Data Sharing</h3>
+                  <p><strong>Information is never sold or shared</strong> with external advertisers or third-party commercial entities. Data is strictly limited to verified teachers and school district mentors.</p>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <h3 className="font-bold text-slate-800 text-sm">5. Judge Demo Temporary Data Guarantee</h3>
+                  <p>Judge Demo sessions operate entirely in ephemeral memory. Any button clicks, logging adjustments, or science project modifications made during Judge Demo are strictly temporary and reset automatically upon signing out or refreshing the browser.</p>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <h3 className="font-bold text-slate-800 text-sm">6. Domain Safety Boundary & Moderation</h3>
+                  <p>External project submissions in Creator Arcade are restricted to pre-approved educational domains (Scratch, GitHub, Replit) and pass through automated keyword and PII filters.</p>
                 </div>
               </div>
             </div>
@@ -2336,6 +2337,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
