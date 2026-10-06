@@ -1,24 +1,64 @@
 import React, { useState } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 
+// User Profile Type definition
+interface UserProfile {
+  name: string;
+  grade: string;
+  school: string;
+  username: string;
+}
+
 // ==========================================
-// LOGIN PAGE COMPONENT
+// LOGIN & SIGN UP PAGE COMPONENT
 // ==========================================
-function LoginPage({ onLogin }: { onLogin: (user: { name: string; grade: string; school: string }) => void }) {
-  const [username, setUsername] = useState('alex_m');
-  const [password, setPassword] = useState('valley2026');
+function AuthPage({ onLogin }: { onLogin: (user: UserProfile) => void }) {
+  const [isSignUp, setIsSignUp] = useState(false);
+
+  // Login form state
+  const [loginUsername, setLoginUsername] = useState('alex_m');
+  const [loginPassword, setLoginPassword] = useState('valley2026');
+
+  // Sign up form state
+  const [fullName, setFullName] = useState('');
+  const [grade, setGrade] = useState('7th Grade');
+  const [school, setSchool] = useState('Bakersfield Middle School');
+  const [regUsername, setRegUsername] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+
   const [error, setError] = useState('');
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim().toLowerCase() === 'alex_m' && password === 'valley2026') {
-      onLogin({ name: 'Alex M.', grade: '7th Grade', school: 'Bakersfield Middle School' });
+    if (loginUsername.trim().toLowerCase() === 'alex_m' && loginPassword === 'valley2026') {
+      onLogin({
+        name: 'Alex M.',
+        grade: '7th Grade',
+        school: 'Bakersfield Middle School',
+        username: 'alex_m',
+      });
     } else {
-      setError('Invalid username or password. (Hint: Use pre-filled demo account or Quick Login below)');
+      setError('Invalid username or password. (Hint: Use demo login or create a new account)');
     }
   };
 
-  const handleQuickLogin = (student: { name: string; grade: string; school: string }) => {
+  const handleSignUpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim() || !regUsername.trim() || !regPassword) {
+      setError('Please fill out all required fields.');
+      return;
+    }
+
+    // Register user and sign them in immediately
+    onLogin({
+      name: fullName.trim(),
+      grade: grade,
+      school: school.trim() || 'Central Valley Middle School',
+      username: regUsername.trim().toLowerCase(),
+    });
+  };
+
+  const handleQuickLogin = (student: UserProfile) => {
     onLogin(student);
   };
 
@@ -33,11 +73,45 @@ function LoginPage({ onLogin }: { onLogin: (user: { name: string; grade: string;
         <p className="text-slate-400 text-sm">Central Valley Environmental & Learning Portal</p>
       </div>
 
-      {/* Login Card */}
+      {/* Auth Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-slate-100 space-y-6">
+        {/* Toggle Mode Tabs */}
+        <div className="flex bg-slate-100 p-1 rounded-xl">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSignUp(false);
+              setError('');
+            }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+              !isSignUp ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsSignUp(true);
+              setError('');
+            }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+              isSignUp ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            Create New Account
+          </button>
+        </div>
+
         <div>
-          <h2 className="text-xl font-bold text-slate-900 text-center">Student Portal Sign In</h2>
-          <p className="text-xs text-slate-500 text-center mt-1">Enter your credentials to access your Safe-Day Dashboard</p>
+          <h2 className="text-xl font-bold text-slate-900 text-center">
+            {isSignUp ? 'Create Student Account' : 'Student Portal Sign In'}
+          </h2>
+          <p className="text-xs text-slate-500 text-center mt-1">
+            {isSignUp
+              ? 'Register to track air quality, hydration, and science activities'
+              : 'Enter your credentials to access your Safe-Day Dashboard'}
+          </p>
         </div>
 
         {error && (
@@ -46,88 +120,193 @@ function LoginPage({ onLogin }: { onLogin: (user: { name: string; grade: string;
           </div>
         )}
 
-        <form onSubmit={handleLoginSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-              Username / Sync ID
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => {
-                setUsername(e.target.value);
-                setError('');
-              }}
-              placeholder="e.g. alex_m"
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
-              required
-            />
-          </div>
+        {!isSignUp ? (
+          /* ================= SIGN IN FORM ================= */
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                Username / Sync ID
+              </label>
+              <input
+                type="text"
+                value={loginUsername}
+                onChange={(e) => {
+                  setLoginUsername(e.target.value);
+                  setError('');
+                }}
+                placeholder="e.g. alex_m"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-              Passcode
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError('');
-              }}
-              placeholder="••••••••"
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-              required
-            />
-          </div>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                Passcode
+              </label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => {
+                  setLoginPassword(e.target.value);
+                  setError('');
+                }}
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                required
+              />
+            </div>
 
-          <button
-            type="submit"
-            className="w-full bg-[#1b365d] hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-sm transition shadow-md"
-          >
-            Sign In to Dashboard
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="w-full bg-[#1b365d] hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-sm transition shadow-md"
+            >
+              Sign In to Dashboard
+            </button>
+          </form>
+        ) : (
+          /* ================= SIGN UP FORM ================= */
+          <form onSubmit={handleSignUpSubmit} className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                Student Full Name
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. Alex M."
+                className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-600"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Grade Level
+                </label>
+                <select
+                  value={grade}
+                  onChange={(e) => setGrade(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium"
+                >
+                  <option>5th Grade</option>
+                  <option>6th Grade</option>
+                  <option>7th Grade</option>
+                  <option>8th Grade</option>
+                  <option>High School</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  School Name
+                </label>
+                <input
+                  type="text"
+                  value={school}
+                  onChange={(e) => setSchool(e.target.value)}
+                  placeholder="Bakersfield Middle"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                Choose Username
+              </label>
+              <input
+                type="text"
+                value={regUsername}
+                onChange={(e) => setRegUsername(e.target.value)}
+                placeholder="e.g. alex_m"
+                className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                Create Passcode
+              </label>
+              <input
+                type="password"
+                value={regPassword}
+                onChange={(e) => setRegPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-md mt-2"
+            >
+              Create Account & Launch Portal
+            </button>
+          </form>
+        )}
 
         {/* Quick Demo Login Profiles */}
-        <div className="pt-4 border-t border-slate-100">
-          <p className="text-xs text-slate-400 font-semibold text-center mb-3 uppercase tracking-wider">
-            Quick Demo Login Profiles
-          </p>
-          <div className="space-y-2">
-            <button
-              onClick={() => handleQuickLogin({ name: 'Alex M.', grade: '7th Grade', school: 'Bakersfield Middle School' })}
-              className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-xl hover:bg-blue-50/50 transition text-left group"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-bold flex items-center justify-center text-xs">
-                  AM
+        {!isSignUp && (
+          <div className="pt-4 border-t border-slate-100">
+            <p className="text-xs text-slate-400 font-semibold text-center mb-3 uppercase tracking-wider">
+              Quick Demo Login Profiles
+            </p>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() =>
+                  handleQuickLogin({
+                    name: 'Alex M.',
+                    grade: '7th Grade',
+                    school: 'Bakersfield Middle School',
+                    username: 'alex_m',
+                  })
+                }
+                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-xl hover:bg-blue-50/50 transition text-left group"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-bold flex items-center justify-center text-xs">
+                    AM
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 group-hover:text-blue-900">Alex M.</p>
+                    <p className="text-[10px] text-slate-400">7th Grade • Bakersfield Middle School</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800 group-hover:text-blue-900">Alex M.</p>
-                  <p className="text-[10px] text-slate-400">7th Grade • Bakersfield Middle School</p>
-                </div>
-              </div>
-              <span className="text-xs text-blue-600 font-bold">Sign In →</span>
-            </button>
+                <span className="text-xs text-blue-600 font-bold">Sign In →</span>
+              </button>
 
-            <button
-              onClick={() => handleQuickLogin({ name: 'Maya M.', grade: '5th Grade', school: 'Bakersfield Elementary' })}
-              className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-xl hover:bg-emerald-50/50 transition text-left group"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
-                  MM
+              <button
+                type="button"
+                onClick={() =>
+                  handleQuickLogin({
+                    name: 'Maya M.',
+                    grade: '5th Grade',
+                    school: 'Bakersfield Elementary',
+                    username: 'maya_m',
+                  })
+                }
+                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-xl hover:bg-emerald-50/50 transition text-left group"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
+                    MM
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-900">Maya M.</p>
+                    <p className="text-[10px] text-slate-400">5th Grade • Bakersfield Elementary</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-900">Maya M.</p>
-                  <p className="text-[10px] text-slate-400">5th Grade • Bakersfield Elementary</p>
-                </div>
-              </div>
-              <span className="text-xs text-emerald-600 font-bold">Sign In →</span>
-            </button>
+                <span className="text-xs text-emerald-600 font-bold">Sign In →</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -136,7 +315,7 @@ function LoginPage({ onLogin }: { onLogin: (user: { name: string; grade: string;
 // ==========================================
 // 1. SAFE-DAY DASHBOARD
 // ==========================================
-function SafeDayDashboard({ currentUser }: { currentUser: { name: string; grade: string; school: string } }) {
+function SafeDayDashboard({ currentUser }: { currentUser: UserProfile }) {
   return (
     <div className="p-6 space-y-6">
       <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex justify-between items-center">
@@ -158,8 +337,12 @@ function SafeDayDashboard({ currentUser }: { currentUser: { name: string; grade:
       <div className="bg-emerald-500 text-white p-6 rounded-2xl shadow-sm flex justify-between items-center">
         <div>
           <div className="flex items-center space-x-2 mb-2">
-            <span className="bg-emerald-700/50 px-3 py-0.5 rounded-full text-xs font-bold tracking-wide">RISK SCORE: 22 / 100</span>
-            <span className="bg-emerald-700/50 px-3 py-0.5 rounded-full text-xs font-bold tracking-wide">Status: GOOD</span>
+            <span className="bg-emerald-700/50 px-3 py-0.5 rounded-full text-xs font-bold tracking-wide">
+              RISK SCORE: 22 / 100
+            </span>
+            <span className="bg-emerald-700/50 px-3 py-0.5 rounded-full text-xs font-bold tracking-wide">
+              Status: GOOD
+            </span>
           </div>
           <h3 className="text-3xl font-extrabold">Safe for Outdoor Activities!</h3>
           <p className="text-emerald-100 text-sm mt-1">Great day for outdoor activities!</p>
@@ -176,7 +359,9 @@ function SafeDayDashboard({ currentUser }: { currentUser: { name: string; grade:
             <span>💨</span>
           </div>
           <p className="text-4xl font-black text-slate-900 mt-2">42</p>
-          <p className="text-xs text-slate-500 mt-1">Pollutant: <span className="font-semibold text-slate-700">PM2.5</span></p>
+          <p className="text-xs text-slate-500 mt-1">
+            Pollutant: <span className="font-semibold text-slate-700">PM2.5</span>
+          </p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
@@ -185,7 +370,9 @@ function SafeDayDashboard({ currentUser }: { currentUser: { name: string; grade:
             <span>🌡️</span>
           </div>
           <p className="text-4xl font-black text-slate-900 mt-2">74°F</p>
-          <p className="text-xs text-slate-500 mt-1">Heat Index: <span className="font-semibold text-slate-700">74°F</span></p>
+          <p className="text-xs text-slate-500 mt-1">
+            Heat Index: <span className="font-semibold text-slate-700">74°F</span>
+          </p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
@@ -194,7 +381,9 @@ function SafeDayDashboard({ currentUser }: { currentUser: { name: string; grade:
             <span>💧</span>
           </div>
           <p className="text-4xl font-black text-slate-900 mt-2">35%</p>
-          <p className="text-xs text-slate-500 mt-1">Wind: <span className="font-semibold text-slate-700">6 mph</span></p>
+          <p className="text-xs text-slate-500 mt-1">
+            Wind: <span className="font-semibold text-slate-700">6 mph</span>
+          </p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
@@ -203,7 +392,9 @@ function SafeDayDashboard({ currentUser }: { currentUser: { name: string; grade:
             <span>👁️</span>
           </div>
           <p className="text-3xl font-black text-slate-900 mt-2">Clear</p>
-          <p className="text-xs text-slate-500 mt-1">Road Visibility: <span className="font-semibold text-slate-700">Normal</span></p>
+          <p className="text-xs text-slate-500 mt-1">
+            Road Visibility: <span className="font-semibold text-slate-700">Normal</span>
+          </p>
         </div>
       </div>
 
@@ -316,10 +507,10 @@ function InviteView() {
     { id: 1, name: 'Alex M.', grade: '7th Grade', school: 'Bakersfield Middle School', code: 'VQ-8842-CA', status: 'Active Account' },
     { id: 2, name: 'Maya M.', grade: '5th Grade', school: 'Bakersfield Elementary', code: 'VQ-3109-CA', status: 'Active Account' },
   ]);
-  
+
   const [teacherCode, setTeacherCode] = useState('');
   const [teacherConnected, setTeacherConnected] = useState(false);
-  const [connectedTeacherName, setConnectedTeacherName] = useState('Mrs. Davis (Science)');
+  const [connectedTeacherName] = useState('Mrs. Davis (Science)');
 
   const [newName, setNewName] = useState('');
   const [newGrade, setNewGrade] = useState('7th Grade');
@@ -799,11 +990,11 @@ function GuardianCAC() {
 // MAIN APP COMPONENT
 // ==========================================
 export default function App() {
-  const [user, setUser] = useState<{ name: string; grade: string; school: string } | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const location = useLocation();
 
   if (!user) {
-    return <LoginPage onLogin={(loggedUser) => setUser(loggedUser)} />;
+    return <AuthPage onLogin={(loggedUser) => setUser(loggedUser)} />;
   }
 
   const navItems = [
@@ -916,6 +1107,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
