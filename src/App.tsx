@@ -45,7 +45,10 @@ import {
   Check,
   Bell,
   CheckSquare,
-  Info
+  Info,
+  TrendingUp,
+  History,
+  RotateCcw
 } from 'lucide-react';
 
 // ==========================================
@@ -71,6 +74,7 @@ interface LocationInfo {
 
 interface KernOpportunity {
   id: number;
+  county: string;
   name: string;
   category: string;
   eventDate: string;
@@ -120,6 +124,18 @@ interface ArcadeGame {
   feedback: string[];
 }
 
+interface DailyLogEntry {
+  dateStr: string; // e.g., '2026-10-06'
+  dayNum: number;
+  waterCount: number;
+  stepCount: number;
+  movementMins: number;
+  activities: Array<{ id: number; title: string; time: string }>;
+  mood: string;
+  readingMinutes: number;
+  booksRead: number;
+}
+
 // ==========================================
 // APPROVED CREATOR ARCADE DOMAINS
 // ==========================================
@@ -167,6 +183,61 @@ const formatFirstAndLastInitial = (fullName: string): string => {
   const parts = fullName.trim().split(' ');
   if (parts.length < 2) return fullName;
   return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.`;
+};
+
+// Helper to generate current date string
+const getFormattedCurrentDate = (): string => {
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  };
+  return new Date().toLocaleDateString('en-US', options);
+};
+
+// Initial Month Daily Logs Helper (October 2026 context)
+const generateInitialMonthlyLogs = (): Record<string, DailyLogEntry> => {
+  const logs: Record<string, DailyLogEntry> = {};
+  const year = 2026;
+  const month = 10; // October
+
+  for (let day = 1; day <= 31; day++) {
+    const dateKey = `2026-10-${day < 10 ? '0' + day : day}`;
+    // Pre-populate past days with realistic demo metrics
+    if (day < 6) {
+      logs[dateKey] = {
+        dateStr: dateKey,
+        dayNum: day,
+        waterCount: Math.floor(Math.random() * 4) + 5,
+        stepCount: Math.floor(Math.random() * 4000) + 6000,
+        movementMins: Math.floor(Math.random() * 30) + 35,
+        activities: [
+          { id: day * 10 + 1, title: 'Afternoon Recess Run', time: '2:30 PM' },
+          { id: day * 10 + 2, title: 'Math Homework Session', time: '5:00 PM' }
+        ],
+        mood: ['Energized', 'Focused', 'Calm', 'Motivated'][day % 4],
+        readingMinutes: Math.floor(Math.random() * 25) + 20,
+        booksRead: day === 3 ? 1 : 0
+      };
+    } else {
+      logs[dateKey] = {
+        dateStr: dateKey,
+        dayNum: day,
+        waterCount: day === 6 ? 4 : 0,
+        stepCount: day === 6 ? 5420 : 0,
+        movementMins: day === 6 ? 30 : 0,
+        activities: day === 6 ? [
+          { id: 1, title: 'Afternoon Soccer Practice', time: '4:00 PM' },
+          { id: 2, title: 'Math Homework Prep', time: '6:30 PM' }
+        ] : [],
+        mood: 'Energized',
+        readingMinutes: day === 6 ? 25 : 0,
+        booksRead: day === 6 ? 1 : 0
+      };
+    }
+  }
+  return logs;
 };
 
 // ==========================================
@@ -279,11 +350,12 @@ const DEFAULT_LOCATION: LocationInfo = {
 };
 
 // ==========================================
-// KERN COUNTY OPPORTUNITIES (ACTIONABLE DATA)
+// REGIONAL OPPORTUNITIES (ACTIONABLE DATA)
 // ==========================================
-const KERN_OPPORTUNITIES: KernOpportunity[] = [
+const ALL_OPPORTUNITIES: KernOpportunity[] = [
   {
     id: 1,
+    county: 'Kern County',
     name: 'Kern County Regional Science Fair',
     category: 'Science & Engineering',
     eventDate: 'March 18, 2027',
@@ -295,6 +367,7 @@ const KERN_OPPORTUNITIES: KernOpportunity[] = [
   },
   {
     id: 2,
+    county: 'Kern County',
     name: 'Kern Codes: Skoolcade Game Development',
     category: 'Coding & Tech',
     eventDate: 'April 24, 2027',
@@ -306,6 +379,7 @@ const KERN_OPPORTUNITIES: KernOpportunity[] = [
   },
   {
     id: 3,
+    county: 'Kern County',
     name: 'Kern STEAM Olympiad Competition',
     category: 'STEAM',
     eventDate: 'May 8, 2027',
@@ -317,6 +391,7 @@ const KERN_OPPORTUNITIES: KernOpportunity[] = [
   },
   {
     id: 4,
+    county: 'Kern County',
     name: 'Bank of America Speech & Essay Contest',
     category: 'Language Arts',
     eventDate: 'February 12, 2027',
@@ -325,6 +400,78 @@ const KERN_OPPORTUNITIES: KernOpportunity[] = [
     location: 'Kern County Museum, Bakersfield',
     officialSourceUrl: 'https://kern.org/student-events/essay-contest/',
     verifiedOn: 'September 28, 2026'
+  },
+  {
+    id: 5,
+    county: 'Fresno County',
+    name: 'Central California Regional Science Fair',
+    category: 'Science & Engineering',
+    eventDate: 'March 22, 2027',
+    deadline: 'February 20, 2027',
+    eligibleGrades: 'Grades 6–12',
+    location: 'Fresno Convention Center, Fresno',
+    officialSourceUrl: 'https://www.fcoe.org/',
+    verifiedOn: 'October 3, 2026'
+  },
+  {
+    id: 6,
+    county: 'Fresno County',
+    name: 'Fresno Unified Robotics Expo',
+    category: 'Robotics',
+    eventDate: 'April 15, 2027',
+    deadline: 'March 15, 2027',
+    eligibleGrades: 'Grades 5–12',
+    location: 'Fresno State Campus',
+    officialSourceUrl: 'https://www.fcoe.org/',
+    verifiedOn: 'October 2, 2026'
+  },
+  {
+    id: 7,
+    county: 'San Joaquin County',
+    name: 'San Joaquin County Science & Engineering Fair',
+    category: 'Science & Engineering',
+    eventDate: 'March 10, 2027',
+    deadline: 'February 10, 2027',
+    eligibleGrades: 'Grades 6–12',
+    location: 'SJCOE Wentworth Education Center, Stockton',
+    officialSourceUrl: 'https://www.sjcoe.org/services-and-support/studentevents',
+    verifiedOn: 'October 1, 2026'
+  },
+  {
+    id: 8,
+    county: 'San Joaquin County',
+    name: 'Stockton Student Coding Challenge',
+    category: 'Coding & Tech',
+    eventDate: 'May 1, 2027',
+    deadline: 'April 1, 2027',
+    eligibleGrades: 'Grades 8–12',
+    location: 'University of the Pacific, Stockton',
+    officialSourceUrl: 'https://www.sjcoe.org/services-and-support/studentevents',
+    verifiedOn: 'September 30, 2026'
+  },
+  {
+    id: 9,
+    county: 'Stanislaus County',
+    name: 'Stanislaus County Math Science Olympiad',
+    category: 'STEAM',
+    eventDate: 'March 27, 2027',
+    deadline: 'February 25, 2027',
+    eligibleGrades: 'Grades 6–12',
+    location: 'Stanislaus County Office of Education, Modesto',
+    officialSourceUrl: 'https://www.stancoe.org/',
+    verifiedOn: 'October 4, 2026'
+  },
+  {
+    id: 10,
+    county: 'Stanislaus County',
+    name: 'Modesto Youth Innovation Showcase',
+    category: 'Coding & Tech',
+    eventDate: 'April 18, 2027',
+    deadline: 'March 20, 2027',
+    eligibleGrades: 'Grades 7–12',
+    location: 'Modesto Junior College',
+    officialSourceUrl: 'https://www.stancoe.org/',
+    verifiedOn: 'October 2, 2026'
   }
 ];
 
@@ -510,6 +657,7 @@ export default function App() {
   const [studentNameInput, setStudentNameInput] = useState<string>('');
   const [usernameInput, setUsernameInput] = useState<string>('');
   const [passwordInput, setPasswordInput] = useState<string>('');
+  const [authError, setAuthError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
 
   // App Navigation
@@ -517,18 +665,48 @@ export default function App() {
   const [zipCode, setZipCode] = useState<string>('93301');
   const [safetyNotice, setSafetyNotice] = useState<string | null>(null);
 
-  // Wellbeing State
-  const [activeWellbeingTab, setActiveWellbeingTab] = useState<'planner' | 'water' | 'mood'>('water');
-  const [waterCount, setWaterCount] = useState<number>(4);
-  const [movementMins, setMovementMins] = useState<number>(30);
-  const [stepCount, setStepCount] = useState<number>(5420);
-  const [activities, setActivities] = useState<Array<{ id: number; title: string; time: string }>>([
-    { id: 1, title: 'Afternoon Soccer Practice', time: '4:00 PM' },
-    { id: 2, title: 'Math Homework Prep', time: '6:30 PM' }
-  ]);
+  // Daily Tracking State for Month (October 2026)
+  const [selectedDayKey, setSelectedDayKey] = useState<string>('2026-10-06');
+  const [monthlyLogs, setMonthlyLogs] = useState<Record<string, DailyLogEntry>>(generateInitialMonthlyLogs);
+
+  // Wellbeing Subtabs
+  const [activeWellbeingTab, setActiveWellbeingTab] = useState<'planner' | 'water' | 'mood' | 'monthly_averages'>('water');
   const [newActivityTitle, setNewActivityTitle] = useState('');
   const [newActivityTime, setNewActivityTime] = useState('');
-  const [selectedMood, setSelectedMood] = useState<string>('Energized');
+
+  // Current day log shortcut
+  const currentDayLog = monthlyLogs[selectedDayKey] || {
+    dateStr: selectedDayKey,
+    dayNum: parseInt(selectedDayKey.split('-')[2]),
+    waterCount: 0,
+    stepCount: 0,
+    movementMins: 0,
+    activities: [],
+    mood: 'Energized',
+    readingMinutes: 0,
+    booksRead: 0
+  };
+
+  // Helper to update current day metrics
+  const updateCurrentDayLog = (fieldsToUpdate: Partial<DailyLogEntry>) => {
+    setMonthlyLogs(prev => ({
+      ...prev,
+      [selectedDayKey]: {
+        ...prev[selectedDayKey],
+        ...fieldsToUpdate
+      }
+    }));
+  };
+
+  // Calculate Monthly Running Averages up to current active logged days
+  const loggedDaysList = Object.values(monthlyLogs).filter(d => d.dayNum <= parseInt(selectedDayKey.split('-')[2]));
+  const loggedDaysCount = loggedDaysList.length || 1;
+  const avgWater = (loggedDaysList.reduce((acc, d) => acc + d.waterCount, 0) / loggedDaysCount).toFixed(1);
+  const avgSteps = Math.round(loggedDaysList.reduce((acc, d) => acc + d.stepCount, 0) / loggedDaysCount);
+  const avgMovement = Math.round(loggedDaysList.reduce((acc, d) => acc + d.movementMins, 0) / loggedDaysCount);
+  const avgReadingMins = Math.round(loggedDaysList.reduce((acc, d) => acc + d.readingMinutes, 0) / loggedDaysCount);
+  const totalBooksRead = Object.values(monthlyLogs).reduce((acc, d) => acc + d.booksRead, 0);
+  const activeReadingDays = Object.values(monthlyLogs).filter(d => d.readingMinutes > 0).length;
 
   // Study Group State
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -545,34 +723,26 @@ export default function App() {
 
   // Science-Fair Coach State
   const [scienceProject, setScienceProject] = useState<ScienceProject>({
-    id: 101,
-    title: 'Central Valley Soil Salinity Impact on Seed Germination',
-    hypothesis: 'Higher salt concentrations in soil will decrease lettuce seed germination rate by over 40%.',
-    independentVariable: 'Soil Salinity Level (0%, 1%, 3%, 5% Salt Solution)',
-    dependentVariable: 'Germination Rate (% of seeds sprouted after 7 days)',
-    controlGroup: 'Pot treated with pure distilled water (0% salt)',
-    dataPoints: [
-      { trial: 1, value: '0% Salt: 10/10 Sprouted (100%)' },
-      { trial: 2, value: '1% Salt: 8/10 Sprouted (80%)' },
-      { trial: 3, value: '3% Salt: 4/10 Sprouted (40%)' },
-      { trial: 4, value: '5% Salt: 1/10 Sprouted (10%)' }
-    ],
+    id: Date.now(),
+    title: '',
+    hypothesis: '',
+    independentVariable: '',
+    dependentVariable: '',
+    controlGroup: '',
+    dataPoints: [],
     milestones: [
-      { id: 1, title: 'Problem Statement & Hypothesis', completed: true, mentorFeedback: 'Excellent hypothesis. Variables are clearly defined.' },
-      { id: 2, title: 'Experimental Controls & Data Table Verification', completed: true, mentorFeedback: 'Control group looks correct. Ensure sample sizes remain consistent.' },
+      { id: 1, title: 'Problem Statement & Hypothesis', completed: false, mentorFeedback: 'Pending student entry...' },
+      { id: 2, title: 'Experimental Controls & Data Table Verification', completed: false, mentorFeedback: 'Pending student entry...' },
       { id: 3, title: 'Tri-Fold Display Board Layout Prep', completed: false, mentorFeedback: 'Follow Kern Regional Science Fair layout guidelines.' }
     ]
   });
-  const [newFeedbackInput, setNewFeedbackInput] = useState('');
   const [newDataValue, setNewDataValue] = useState('');
 
   // Reading Tracker State
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>('All Ages');
   const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
   const [searchBookTerm, setSearchBookTerm] = useState<string>('');
-  const [booksReadCount, setBooksReadCount] = useState<number>(3);
-  const [readingMinutes, setReadingMinutes] = useState<number>(145);
-  const [readingGoalMins, setReadingGoalMins] = useState<number>(200);
+  const [readingGoalMins, setReadingGoalMins] = useState<number>(300);
 
   // STEM Board Reminders State
   const [reminders, setReminders] = useState<number[]>([]);
@@ -593,6 +763,11 @@ export default function App() {
 
   const currentLocation = CENTRAL_VALLEY_DATA[zipCode] || DEFAULT_LOCATION;
 
+  // Dynamically filter opportunities based on selected zip code/county
+  const activeOpportunities = ALL_OPPORTUNITIES.filter(
+    (opp) => opp.county === currentLocation.county
+  );
+
   // Judge Demo Trigger
   const handleTriggerJudgeDemo = () => {
     const demoUser: UserAccount = {
@@ -604,26 +779,73 @@ export default function App() {
       isVerifiedTeacher: true
     };
     setCurrentUser(demoUser);
+    setSelectedDayKey('2026-10-06');
+    setMonthlyLogs(generateInitialMonthlyLogs());
+    setScienceProject({
+      id: 101,
+      title: 'Central Valley Soil Salinity Impact on Seed Germination',
+      hypothesis: 'Higher salt concentrations in soil will decrease lettuce seed germination rate by over 40%.',
+      independentVariable: 'Soil Salinity Level (0%, 1%, 3%, 5% Salt Solution)',
+      dependentVariable: 'Germination Rate (% of seeds sprouted after 7 days)',
+      controlGroup: 'Pot treated with pure distilled water (0% salt)',
+      dataPoints: [
+        { trial: 1, value: '0% Salt: 10/10 Sprouted (100%)' },
+        { trial: 2, value: '1% Salt: 8/10 Sprouted (80%)' },
+        { trial: 3, value: '3% Salt: 4/10 Sprouted (40%)' },
+        { trial: 4, value: '5% Salt: 1/10 Sprouted (10%)' }
+      ],
+      milestones: [
+        { id: 1, title: 'Problem Statement & Hypothesis', completed: true, mentorFeedback: 'Excellent hypothesis. Variables are clearly defined.' },
+        { id: 2, title: 'Experimental Controls & Data Table Verification', completed: true, mentorFeedback: 'Control group looks correct. Ensure sample sizes remain consistent.' },
+        { id: 3, title: 'Tri-Fold Display Board Layout Prep', completed: false, mentorFeedback: 'Follow Kern Regional Science Fair layout guidelines.' }
+      ]
+    });
     setIsLoggedIn(true);
-    setSafetyNotice('Logged in under One-Click Judge Demo mode. Full teacher privileges & sample data active.');
+    setSafetyNotice('Logged in under One-Click Judge Demo mode. Daily tracking and monthly averages pre-loaded.');
   };
 
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!usernameInput) return;
+    setAuthError(null);
 
-    const formattedName = studentNameInput ? formatFirstAndLastInitial(studentNameInput) : usernameInput;
-    const newAccount: UserAccount = {
-      username: usernameInput,
-      studentName: formattedName,
-      role: loginRole,
-      code: 'CV-' + Math.floor(100000 + Math.random() * 900000).toString(),
-      joinedBuddies: [],
-      isVerifiedTeacher: loginRole === 'Teacher'
-    };
+    if (authMode === 'signup') {
+      if (!studentNameInput.trim() || !usernameInput.trim() || !passwordInput) {
+        setAuthError('Please fill in all required fields to create an account.');
+        return;
+      }
+      const formattedName = formatFirstAndLastInitial(studentNameInput);
+      const newAccount: UserAccount = {
+        username: usernameInput.trim().toLowerCase(),
+        studentName: formattedName,
+        role: loginRole,
+        code: 'CV-' + Math.floor(100000 + Math.random() * 900000).toString(),
+        joinedBuddies: [],
+        isVerifiedTeacher: loginRole === 'Teacher'
+      };
+      setMonthlyLogs(generateInitialMonthlyLogs());
+      setCurrentUser(newAccount);
+      setIsLoggedIn(true);
+    } else {
+      if (!usernameInput.trim() || !passwordInput) {
+        setAuthError('Please enter both your username and password.');
+        return;
+      }
+      const formattedName = usernameInput.trim();
+      const existingAccount: UserAccount = {
+        username: usernameInput.trim().toLowerCase(),
+        studentName: formattedName,
+        role: loginRole,
+        code: 'CV-' + Math.floor(100000 + Math.random() * 900000).toString(),
+        joinedBuddies: [],
+        isVerifiedTeacher: loginRole === 'Teacher'
+      };
+      setCurrentUser(existingAccount);
+      setIsLoggedIn(true);
+    }
 
-    setCurrentUser(newAccount);
-    setIsLoggedIn(true);
+    setUsernameInput('');
+    setPasswordInput('');
+    setStudentNameInput('');
   };
 
   const handleAddCodeBuddy = () => {
@@ -736,7 +958,7 @@ export default function App() {
             >
               <Sparkles className="w-4 h-4" /> Try Judge Demo — No Account Required
             </button>
-            <p className="text-[10px] text-slate-400">Preloaded with weather feeds, science project, goals & events</p>
+            <p className="text-[10px] text-slate-400">Preloaded with weather feeds, daily logs & monthly averages</p>
           </div>
 
           <div className="relative flex py-1 items-center">
@@ -749,29 +971,62 @@ export default function App() {
             <div className="grid grid-cols-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
               <button
                 type="button"
-                onClick={() => setAuthMode('signin')}
+                onClick={() => { setAuthMode('signin'); setAuthError(null); }}
                 className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${authMode === 'signin' ? 'bg-[#2563eb] text-white' : 'text-slate-400'}`}
               >
                 Sign In
               </button>
               <button
                 type="button"
-                onClick={() => setAuthMode('signup')}
+                onClick={() => { setAuthMode('signup'); setAuthError(null); }}
                 className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${authMode === 'signup' ? 'bg-[#2563eb] text-white' : 'text-slate-400'}`}
               >
                 Create Account
               </button>
             </div>
 
+            {authError && (
+              <div className="bg-rose-500/20 border border-rose-500/50 text-rose-200 text-xs p-3 rounded-lg flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            {authMode === 'signup' && (
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Full Name (Formatted automatically for privacy)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Maria Garcia"
+                  value={studentNameInput}
+                  onChange={(e) => setStudentNameInput(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+            )}
+
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                {authMode === 'signup' ? 'Full Name (Auto-formatted to First & Last Initial)' : 'Username'}
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Username</label>
               <input
                 type="text"
-                placeholder={authMode === 'signup' ? 'e.g. Maria Garcia' : 'e.g. mgarcia'}
-                value={studentNameInput}
-                onChange={(e) => setStudentNameInput(e.target.value)}
+                placeholder="e.g. mgarcia"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
                 required
               />
@@ -793,7 +1048,8 @@ export default function App() {
               type="submit"
               className="w-full bg-[#2563eb] hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 shadow-lg transition-all"
             >
-              <LogIn className="w-4 h-4" /> Sign In to Portal
+              {authMode === 'signup' ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+              {authMode === 'signup' ? 'Create Account' : 'Sign In to Portal'}
             </button>
           </form>
         </div>
@@ -923,12 +1179,23 @@ export default function App() {
             </div>
           </div>
 
-          {/* ========================================================
-              MODULE 1: SAFE-DAY DASHBOARD
-             ======================================================== */}
+          {/* MODULE 1: SAFE-DAY DASHBOARD */}
           {activeTab === 'Safe-Day Dashboard' && (
             <div className="space-y-6">
-              <h2 className="text-lg font-bold text-slate-800">Safe-Day Real-Time Environmental Dashboard</h2>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Safe-Day Real-Time Environmental Dashboard</h2>
+                  <p className="text-xs text-slate-500">Real-time local conditions and protective measures for Central Valley outdoor activities.</p>
+                </div>
+                {/* TODAY'S DATE BADGE */}
+                <div className="bg-blue-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm shrink-0">
+                  <Calendar className="w-4 h-4 text-blue-300" />
+                  <div>
+                    <span className="text-[10px] text-blue-300 font-bold uppercase block leading-none">Today's Date</span>
+                    <span className="text-xs font-extrabold">{getFormattedCurrentDate()}</span>
+                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Real-time AQI & Weather Card */}
@@ -975,7 +1242,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Personalized Advice Based on Outdoor Gear */}
+              {/* Outdoor Guidance Advice */}
               <div className="bg-gradient-to-r from-blue-900 to-slate-900 text-white rounded-xl p-6 shadow-md space-y-3">
                 <div className="flex items-center gap-2">
                   <Glasses className="w-5 h-5 text-blue-400" />
@@ -1031,9 +1298,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ========================================================
-              MODULE 2: JOIN CLASS OR STUDY GROUP (RENAMED & RESTRICTED)
-             ======================================================== */}
+          {/* MODULE 2: JOIN CLASS OR STUDY GROUP */}
           {activeTab === 'Join Class or Study Group' && (
             <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100 max-w-2xl mx-auto space-y-6">
               <div className="text-center space-y-1">
@@ -1081,8 +1346,8 @@ export default function App() {
                     {currentUser.joinedBuddies.map((buddy, idx) => (
                       <span key={idx} className="bg-blue-50 border border-blue-200 text-blue-900 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm">
                         <User className="w-3.5 h-3.5 text-blue-600" />
-                        <span className="font-bold text-slate-800">{buddy.name}</span>
-                        <span className="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded font-mono font-bold">{buddy.code}</span>
+                        <span className="font-bold text-slate-800">Code: {buddy.code}</span>
+                        <span className="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded font-mono font-bold">{buddy.role}</span>
                       </span>
                     ))}
                   </div>
@@ -1093,12 +1358,69 @@ export default function App() {
             </div>
           )}
 
-          {/* ========================================================
-              MODULE 3: ACTIVITY & WELLBEING (PROTECTED MENTAL HEALTH RESOURCES)
-             ======================================================== */}
+          {/* MODULE 3: ACTIVITY & WELLBEING WITH DAILY LOGS & MONTHLY AVERAGES */}
           {activeTab === 'Activity & Wellbeing' && (
             <div className="space-y-6">
-              <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 w-fit">
+              {/* Day Selection Bar & Automatic Daily Reset Controls */}
+              <div className="bg-slate-900 text-white p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <History className="w-5 h-5 text-blue-400" />
+                    <div>
+                      <h3 className="text-sm font-bold">Daily Tracking & Monthly History Log</h3>
+                      <p className="text-[11px] text-slate-400">
+                        Metrics reset to 0 daily. Select any day in October to inspect logs or add activities.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Select Date Log:</label>
+                    <select
+                      value={selectedDayKey}
+                      onChange={(e) => setSelectedDayKey(e.target.value)}
+                      className="bg-slate-800 border border-slate-700 text-white text-xs px-3 py-1.5 rounded-lg font-mono font-bold focus:outline-none focus:border-blue-500"
+                    >
+                      {Object.keys(monthlyLogs).map((key) => {
+                        const dayNum = parseInt(key.split('-')[2]);
+                        return (
+                          <option key={key} value={key}>
+                            Oct {dayNum}, 2026 {key === '2026-10-06' ? '(Today)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Day Quick Navigation Strip */}
+                <div className="flex gap-1.5 overflow-x-auto pt-1 pb-1">
+                  {Object.keys(monthlyLogs).map((key) => {
+                    const dayNum = parseInt(key.split('-')[2]);
+                    const isSelected = selectedDayKey === key;
+                    const hasData = monthlyLogs[key].waterCount > 0 || monthlyLogs[key].stepCount > 0;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedDayKey(key)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold shrink-0 transition-all ${
+                          isSelected ? 'bg-blue-600 text-white shadow-md border border-blue-400' : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Oct {dayNum} {hasData ? '•' : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Subtab Navigation */}
+              <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 flex-wrap">
+                <button
+                  onClick={() => setActiveWellbeingTab('water')}
+                  className={`px-4 py-2 rounded-lg text-xs font-semibold ${activeWellbeingTab === 'water' ? 'bg-[#2563eb] text-white' : 'text-slate-600'}`}
+                >
+                  Water & Physical Tracker
+                </button>
                 <button
                   onClick={() => setActiveWellbeingTab('planner')}
                   className={`px-4 py-2 rounded-lg text-xs font-semibold ${activeWellbeingTab === 'planner' ? 'bg-[#2563eb] text-white' : 'text-slate-600'}`}
@@ -1106,65 +1428,101 @@ export default function App() {
                   Activity Planner
                 </button>
                 <button
-                  onClick={() => setActiveWellbeingTab('water')}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold ${activeWellbeingTab === 'water' ? 'bg-[#2563eb] text-white' : 'text-slate-600'}`}
-                >
-                  Water & Hydration
-                </button>
-                <button
                   onClick={() => setActiveWellbeingTab('mood')}
                   className={`px-4 py-2 rounded-lg text-xs font-semibold ${activeWellbeingTab === 'mood' ? 'bg-[#2563eb] text-white' : 'text-slate-600'}`}
                 >
                   Private Reflection & Support
                 </button>
+                <button
+                  onClick={() => setActiveWellbeingTab('monthly_averages')}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold ${activeWellbeingTab === 'monthly_averages' ? 'bg-emerald-600 text-white' : 'text-emerald-700 bg-emerald-50'}`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5 inline mr-1" /> Monthly Averages & Log Table
+                </button>
               </div>
 
               {activeWellbeingTab === 'water' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center flex flex-col items-center justify-between">
-                    <div className="space-y-3">
-                      <Droplet className="w-8 h-8 text-blue-500 mx-auto" />
-                      <h2 className="text-base font-bold text-slate-800">Valley Hydration Tracker</h2>
-                      <div className="text-4xl font-extrabold text-blue-600">
-                        {waterCount} <span className="text-slate-400 text-2xl font-normal">/ 8</span>
-                      </div>
-                      <p className="text-xs text-slate-400">Glasses of water (8 oz each)</p>
-                    </div>
-                    <div className="flex gap-2 mt-6">
-                      <button onClick={() => setWaterCount((c) => c + 1)} className="bg-[#2563eb] text-white text-xs px-3 py-1.5 rounded-lg">+ Add Glass</button>
-                      <button onClick={() => setWaterCount((c) => Math.max(0, c - 1))} className="bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg">- Remove</button>
-                    </div>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 text-blue-900 p-3 rounded-lg text-xs font-medium flex items-center justify-between">
+                    <span>Active Logging Day: <strong>October {currentDayLog.dayNum}, 2026</strong></span>
+                    <button
+                      onClick={() => updateCurrentDayLog({ waterCount: 0, stepCount: 0, movementMins: 0 })}
+                      className="text-[11px] font-bold text-rose-600 hover:underline flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Reset Daily Totals to 0
+                    </button>
                   </div>
 
-                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center flex flex-col items-center justify-between">
-                    <div className="space-y-3">
-                      <Footprints className="w-8 h-8 text-emerald-500 mx-auto" />
-                      <h2 className="text-base font-bold text-slate-800">Steps Tracker</h2>
-                      <div className="text-4xl font-extrabold text-emerald-600">
-                        {stepCount.toLocaleString()} <span className="text-slate-400 text-2xl font-normal">/ 10k</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center flex flex-col items-center justify-between">
+                      <div className="space-y-3">
+                        <Droplet className="w-8 h-8 text-blue-500 mx-auto" />
+                        <h2 className="text-base font-bold text-slate-800">Valley Hydration Tracker</h2>
+                        <div className="text-4xl font-extrabold text-blue-600">
+                          {currentDayLog.waterCount} <span className="text-slate-400 text-2xl font-normal">/ 8</span>
+                        </div>
+                        <p className="text-xs text-slate-400">Glasses of water (8 oz each)</p>
                       </div>
-                      <p className="text-xs text-slate-400">Daily physical steps target</p>
+                      <div className="flex gap-2 mt-6">
+                        <button
+                          onClick={() => updateCurrentDayLog({ waterCount: currentDayLog.waterCount + 1 })}
+                          className="bg-[#2563eb] text-white text-xs px-3 py-1.5 rounded-lg"
+                        >
+                          + Add Glass
+                        </button>
+                        <button
+                          onClick={() => updateCurrentDayLog({ waterCount: Math.max(0, currentDayLog.waterCount - 1) })}
+                          className="bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg"
+                        >
+                          - Remove
+                        </button>
+                      </div>
                     </div>
-                    <button onClick={() => setStepCount((s) => s + 500)} className="mt-6 bg-emerald-600 text-white text-xs px-4 py-2 rounded-lg font-semibold">+ 500 Steps</button>
-                  </div>
 
-                  <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center flex flex-col items-center justify-between">
-                    <div className="space-y-3">
-                      <Activity className="w-8 h-8 text-rose-500 mx-auto" />
-                      <h2 className="text-base font-bold text-slate-800">Movement Target</h2>
-                      <div className="text-4xl font-extrabold text-rose-600">
-                        {movementMins} <span className="text-slate-400 text-2xl font-normal">/ 60 mins</span>
+                    <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center flex flex-col items-center justify-between">
+                      <div className="space-y-3">
+                        <Footprints className="w-8 h-8 text-emerald-500 mx-auto" />
+                        <h2 className="text-base font-bold text-slate-800">Steps Tracker</h2>
+                        <div className="text-4xl font-extrabold text-emerald-600">
+                          {currentDayLog.stepCount.toLocaleString()} <span className="text-slate-400 text-2xl font-normal">/ 10k</span>
+                        </div>
+                        <p className="text-xs text-slate-400">Daily physical steps target</p>
                       </div>
-                      <p className="text-xs text-slate-400">Outdoor exercise mins</p>
+                      <button
+                        onClick={() => updateCurrentDayLog({ stepCount: currentDayLog.stepCount + 500 })}
+                        className="mt-6 bg-emerald-600 text-white text-xs px-4 py-2 rounded-lg font-semibold"
+                      >
+                        + 500 Steps
+                      </button>
                     </div>
-                    <button onClick={() => setMovementMins((m) => m + 10)} className="mt-6 bg-rose-600 text-white text-xs px-4 py-2 rounded-lg font-semibold">+ 10 Mins</button>
+
+                    <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center flex flex-col items-center justify-between">
+                      <div className="space-y-3">
+                        <Activity className="w-8 h-8 text-rose-500 mx-auto" />
+                        <h2 className="text-base font-bold text-slate-800">Movement Target</h2>
+                        <div className="text-4xl font-extrabold text-rose-600">
+                          {currentDayLog.movementMins} <span className="text-slate-400 text-2xl font-normal">/ 60 mins</span>
+                        </div>
+                        <p className="text-xs text-slate-400">Outdoor exercise mins</p>
+                      </div>
+                      <button
+                        onClick={() => updateCurrentDayLog({ movementMins: currentDayLog.movementMins + 10 })}
+                        className="mt-6 bg-rose-600 text-white text-xs px-4 py-2 rounded-lg font-semibold"
+                      >
+                        + 10 Mins
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
 
               {activeWellbeingTab === 'planner' && (
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-6">
-                  <h2 className="text-base font-bold text-slate-800">Scheduled Daily Outdoor Activities</h2>
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h2 className="text-base font-bold text-slate-800">Scheduled Daily Outdoor Activities (Oct {currentDayLog.dayNum})</h2>
+                    <span className="text-xs text-slate-500 font-medium">Logged for date: {selectedDayKey}</span>
+                  </div>
+
                   <div className="flex gap-3">
                     <input
                       type="text"
@@ -1183,7 +1541,8 @@ export default function App() {
                     <button
                       onClick={() => {
                         if (newActivityTitle) {
-                          setActivities([...activities, { id: Date.now(), title: newActivityTitle, time: newActivityTime || 'Anytime' }]);
+                          const updated = [...currentDayLog.activities, { id: Date.now(), title: newActivityTitle, time: newActivityTime || 'Anytime' }];
+                          updateCurrentDayLog({ activities: updated });
                           setNewActivityTitle('');
                           setNewActivityTime('');
                         }
@@ -1193,20 +1552,24 @@ export default function App() {
                       Add Activity
                     </button>
                   </div>
+
                   <div className="space-y-2">
-                    {activities.map((item) => (
-                      <div key={item.id} className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
-                        <span className="font-semibold text-slate-800">{item.title}</span>
-                        <span className="bg-slate-200 text-slate-700 px-2 py-1 rounded font-mono">{item.time}</span>
-                      </div>
-                    ))}
+                    {currentDayLog.activities.length > 0 ? (
+                      currentDayLog.activities.map((item) => (
+                        <div key={item.id} className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-800">{item.title}</span>
+                          <span className="bg-slate-200 text-slate-700 px-2 py-1 rounded font-mono">{item.time}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">No activities logged for Oct {currentDayLog.dayNum} yet.</p>
+                    )}
                   </div>
                 </div>
               )}
 
               {activeWellbeingTab === 'mood' && (
                 <div className="space-y-6">
-                  {/* Crisis & Professional Health Notice */}
                   <div className="bg-red-50 border border-red-300 text-red-900 p-5 rounded-xl space-y-2">
                     <div className="flex items-center gap-2 font-bold text-sm">
                       <AlertTriangle className="w-5 h-5 text-red-600" />
@@ -1220,10 +1583,9 @@ export default function App() {
                     </p>
                   </div>
 
-                  {/* Private Self-Reflection Card */}
                   <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 text-center max-w-xl mx-auto space-y-4">
                     <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                      <h2 className="text-base font-bold text-slate-800">Private Reflection Journal</h2>
+                      <h2 className="text-base font-bold text-slate-800">Private Reflection Journal (Oct {currentDayLog.dayNum})</h2>
                       <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1">
                         <Lock className="w-3 h-3" /> Strictly Private
                       </span>
@@ -1234,9 +1596,9 @@ export default function App() {
                       {['Energized', 'Focused', 'Calm', 'Tired', 'Stressed', 'Motivated'].map((m) => (
                         <button
                           key={m}
-                          onClick={() => setSelectedMood(m)}
+                          onClick={() => updateCurrentDayLog({ mood: m })}
                           className={`p-3 rounded-xl border text-xs font-bold transition-all ${
-                            selectedMood === m ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200'
+                            currentDayLog.mood === m ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-200'
                           }`}
                         >
                           {m}
@@ -1246,12 +1608,73 @@ export default function App() {
                   </div>
                 </div>
               )}
+
+              {/* MONTHLY AVERAGES & HISTORY LOG VIEW */}
+              {activeWellbeingTab === 'monthly_averages' && (
+                <div className="space-y-6">
+                  {/* Monthly Running Average Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-1">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase">Monthly Avg Water / Day</span>
+                      <h3 className="text-2xl font-extrabold text-blue-600">{avgWater} <span className="text-xs font-normal text-slate-500">Glasses</span></h3>
+                      <p className="text-[10px] text-slate-400">Target: 8 glasses daily</p>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-1">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase">Monthly Avg Steps / Day</span>
+                      <h3 className="text-2xl font-extrabold text-emerald-600">{avgSteps.toLocaleString()} <span className="text-xs font-normal text-slate-500">Steps</span></h3>
+                      <p className="text-[10px] text-slate-400">Target: 10,000 steps daily</p>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-1">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase">Monthly Avg Active Movement</span>
+                      <h3 className="text-2xl font-extrabold text-rose-600">{avgMovement} <span className="text-xs font-normal text-slate-500">Mins / Day</span></h3>
+                      <p className="text-[10px] text-slate-400">Target: 60 mins daily</p>
+                    </div>
+                  </div>
+
+                  {/* Daily Log Table until Month End */}
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 space-y-4">
+                    <h3 className="text-sm font-bold text-slate-800">October 2026 Daily Log History (Month-End View)</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-800 text-white">
+                            <th className="p-2.5 border border-slate-700">Date</th>
+                            <th className="p-2.5 border border-slate-700">Water (Glasses)</th>
+                            <th className="p-2.5 border border-slate-700">Steps Logged</th>
+                            <th className="p-2.5 border border-slate-700">Movement Mins</th>
+                            <th className="p-2.5 border border-slate-700">Activities</th>
+                            <th className="p-2.5 border border-slate-700">Reflection</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.values(monthlyLogs).map((log) => (
+                            <tr key={log.dateStr} className={`hover:bg-slate-50 ${log.dateStr === selectedDayKey ? 'bg-blue-50/70 font-semibold' : 'even:bg-slate-50/50'}`}>
+                              <td className="p-2.5 border border-slate-200 font-mono">
+                                Oct {log.dayNum}, 2026 {log.dateStr === selectedDayKey ? '(Active)' : ''}
+                              </td>
+                              <td className="p-2.5 border border-slate-200 font-bold text-blue-600">{log.waterCount} / 8</td>
+                              <td className="p-2.5 border border-slate-200 font-mono text-emerald-700">{log.stepCount.toLocaleString()}</td>
+                              <td className="p-2.5 border border-slate-200 font-mono text-rose-600">{log.movementMins} mins</td>
+                              <td className="p-2.5 border border-slate-200 text-slate-600">
+                                {log.activities.length > 0 ? log.activities.map(a => a.title).join(', ') : 'None'}
+                              </td>
+                              <td className="p-2.5 border border-slate-200">
+                                <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">{log.mood}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* ========================================================
-              MODULE 4: STUDY BUDDY (MODERATED QUESTION HUB)
-             ======================================================== */}
+          {/* MODULE 4: STUDY BUDDY */}
           {activeTab === 'Study Buddy' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
@@ -1297,7 +1720,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Questions Stream */}
               <div className="space-y-4">
                 {homeworkQuestions.map((q) => (
                   <div key={q.id} className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm space-y-3">
@@ -1362,39 +1784,57 @@ export default function App() {
             </div>
           )}
 
-          {/* ========================================================
-              MODULE 5: READING TRACKER (PAGES, STREAKS & GOALS)
-             ======================================================== */}
+          {/* MODULE 5: READING TRACKER WITH DAILY LOGS & MONTHLY AVERAGES */}
           {activeTab === 'Reading Tracker' && (
             <div className="space-y-6">
-              {/* Reading Progress Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase">Books Completed</span>
-                    <h3 className="text-2xl font-extrabold text-slate-800">{booksReadCount} Books</h3>
-                  </div>
-                  <button onClick={() => setBooksReadCount(c => c + 1)} className="bg-blue-50 text-blue-700 text-xs px-3 py-1.5 rounded-lg font-bold border border-blue-200">+ Log Book</button>
+              <div className="bg-slate-900 text-white p-4 rounded-xl border border-slate-800 flex justify-between items-center flex-wrap gap-2">
+                <div>
+                  <h2 className="text-base font-bold">Daily Reading Tracker & Progress Log</h2>
+                  <p className="text-xs text-slate-400">Logging for: <strong>October {currentDayLog.dayNum}, 2026</strong></p>
                 </div>
-
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase">Monthly Reading Goal</span>
-                    <h3 className="text-2xl font-extrabold text-blue-600">{readingMinutes} / {readingGoalMins} mins</h3>
-                  </div>
-                  <button onClick={() => setReadingMinutes(m => m + 15)} className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold">+ 15 Mins</button>
-                </div>
-
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase">Reading Streak</span>
-                    <h3 className="text-2xl font-extrabold text-amber-500">🔥 6 Days</h3>
-                  </div>
-                  <span className="text-xs text-slate-400 font-semibold">Keep it up!</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-300 font-medium">Switch Active Date:</span>
+                  <select
+                    value={selectedDayKey}
+                    onChange={(e) => setSelectedDayKey(e.target.value)}
+                    className="bg-slate-800 border border-slate-700 text-white text-xs px-3 py-1 rounded-lg font-mono font-bold"
+                  >
+                    {Object.keys(monthlyLogs).map((key) => (
+                      <option key={key} value={key}>Oct {key.split('-')[2]}, 2026</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Book Recommendation Filter */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+                  <span className="text-xs font-bold text-slate-400 uppercase block mb-1">Today's Reading</span>
+                  <h3 className="text-2xl font-extrabold text-blue-600">{currentDayLog.readingMinutes} Mins</h3>
+                  <div className="mt-3 flex gap-1">
+                    <button onClick={() => updateCurrentDayLog({ readingMinutes: currentDayLog.readingMinutes + 15 })} className="bg-blue-600 text-white text-xs px-2.5 py-1 rounded font-bold">+ 15 Mins</button>
+                    <button onClick={() => updateCurrentDayLog({ readingMinutes: Math.max(0, currentDayLog.readingMinutes - 15) })} className="bg-slate-200 text-slate-700 text-xs px-2.5 py-1 rounded">- 15</button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+                  <span className="text-xs font-bold text-slate-400 uppercase block mb-1">Books Completed</span>
+                  <h3 className="text-2xl font-extrabold text-slate-800">{totalBooksRead} Books</h3>
+                  <button onClick={() => updateCurrentDayLog({ booksRead: currentDayLog.booksRead + 1 })} className="mt-3 bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-lg font-bold border border-blue-200">+ Log Book</button>
+                </div>
+
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+                  <span className="text-xs font-bold text-slate-400 uppercase block mb-1">Active Reading Days</span>
+                  <h3 className="text-2xl font-extrabold text-amber-500">🔥 {activeReadingDays} Days</h3>
+                  <p className="text-[10px] text-slate-400 mt-1">Days logged in October</p>
+                </div>
+
+                <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+                  <span className="text-xs font-bold text-slate-400 uppercase block mb-1">Monthly Avg Reading</span>
+                  <h3 className="text-2xl font-extrabold text-emerald-600">{avgReadingMins} Mins / Day</h3>
+                  <p className="text-[10px] text-slate-400 mt-1">Running monthly average</p>
+                </div>
+              </div>
+
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
                 <div className="flex justify-between items-center flex-wrap gap-2">
                   <h2 className="text-base font-bold text-slate-800">Curated Reading Recommendations</h2>
@@ -1451,16 +1891,22 @@ export default function App() {
             </div>
           )}
 
-          {/* ========================================================
-              MODULE 6: KERN COUNTY STEM OPPORTUNITIES BOARD (ACTIONABLE)
-             ======================================================== */}
+          {/* MODULE 6: STEM OPPORTUNITIES BOARD */}
           {activeTab === 'STEM Opportunities Board' && (
             <div className="space-y-6">
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-3">
-                <h2 className="text-base font-bold text-slate-800">Kern County & Regional Student Opportunities Board</h2>
-                <p className="text-xs text-slate-500">
-                  Comprehensive local competitions with grade eligibility, deadlines, locations, and direct verified official links.
-                </p>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-3 flex justify-between items-start flex-wrap gap-4">
+                <div>
+                  <h2 className="text-base font-bold text-slate-800">
+                    {currentLocation.district} ({currentLocation.county}) STEM Opportunities Board
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Comprehensive local competitions with grade eligibility, deadlines, locations, and direct verified official links.
+                  </p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg text-right">
+                  <span className="text-[10px] text-blue-600 font-bold uppercase block">Active Filter District</span>
+                  <span className="text-xs font-extrabold text-blue-900">{currentLocation.district} ({activeOpportunities.length} Events)</span>
+                </div>
               </div>
 
               <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-slate-100">
@@ -1477,48 +1923,54 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {KERN_OPPORTUNITIES.map((opp) => (
-                      <tr key={opp.id} className="even:bg-slate-50 hover:bg-slate-100 transition-colors">
-                        <td className="p-3 border border-slate-200 font-bold text-slate-900">{opp.name}</td>
-                        <td className="p-3 border border-slate-200">
-                          <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[11px] font-semibold">{opp.category}</span>
-                        </td>
-                        <td className="p-3 border border-slate-200 font-bold text-red-600">{opp.deadline}</td>
-                        <td className="p-3 border border-slate-200 font-semibold text-slate-700">{opp.eventDate}</td>
-                        <td className="p-3 border border-slate-200 font-medium text-slate-600">{opp.eligibleGrades}</td>
-                        <td className="p-3 border border-slate-200 text-slate-600">{opp.location}</td>
-                        <td className="p-3 border border-slate-200 text-center space-y-1">
-                          <a
-                            href={opp.officialSourceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-[11px] font-bold"
-                          >
-                            Source Link <ExternalLink className="w-3 h-3" />
-                          </a>
-                          <div>
-                            <button
-                              onClick={() => toggleReminder(opp.id)}
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-colors ${
-                                reminders.includes(opp.id) ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-600'
-                              }`}
+                    {activeOpportunities.length > 0 ? (
+                      activeOpportunities.map((opp) => (
+                        <tr key={opp.id} className="even:bg-slate-50 hover:bg-slate-100 transition-colors">
+                          <td className="p-3 border border-slate-200 font-bold text-slate-900">{opp.name}</td>
+                          <td className="p-3 border border-slate-200">
+                            <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[11px] font-semibold">{opp.category}</span>
+                          </td>
+                          <td className="p-3 border border-slate-200 font-bold text-red-600">{opp.deadline}</td>
+                          <td className="p-3 border border-slate-200 font-semibold text-slate-700">{opp.eventDate}</td>
+                          <td className="p-3 border border-slate-200 font-medium text-slate-600">{opp.eligibleGrades}</td>
+                          <td className="p-3 border border-slate-200 text-slate-600">{opp.location}</td>
+                          <td className="p-3 border border-slate-200 text-center space-y-1">
+                            <a
+                              href={opp.officialSourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-[11px] font-bold"
                             >
-                              {reminders.includes(opp.id) ? '✓ Reminder Set' : '+ Add Reminder'}
-                            </button>
-                          </div>
-                          <p className="text-[9px] text-slate-400">Verified on {opp.verifiedOn}</p>
+                              Source Link <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <div>
+                              <button
+                                onClick={() => toggleReminder(opp.id)}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-colors ${
+                                  reminders.includes(opp.id) ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-600'
+                                }`}
+                              >
+                                {reminders.includes(opp.id) ? '✓ Reminder Set' : '+ Add Reminder'}
+                              </button>
+                            </div>
+                            <p className="text-[9px] text-slate-400">Verified on {opp.verifiedOn}</p>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="p-4 text-center text-slate-500 italic">
+                          No STEM events listed for {currentLocation.county} yet.
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
 
-          {/* ========================================================
-              MODULE 7: SCIENCE-FAIR COACH (FULL PROJECT HUB)
-             ======================================================== */}
+          {/* MODULE 7: SCIENCE-FAIR COACH */}
           {activeTab === 'Science-Fair Coach' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex justify-between items-center">
@@ -1531,41 +1983,78 @@ export default function App() {
                 </span>
               </div>
 
-              {/* Project Details */}
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
-                <h3 className="text-sm font-bold text-slate-900">{scienceProject.title}</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Project Title:</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Central Valley Soil Salinity Impact on Seed Germination"
+                      value={scienceProject.title}
+                      onChange={(e) => setScienceProject({ ...scienceProject, title: e.target.value })}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    <strong className="block text-slate-700 mb-1">Independent Variable:</strong>
-                    <span className="text-slate-600">{scienceProject.independentVariable}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+                      <label className="block font-bold text-slate-700">Independent Variable:</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Soil Salinity Level"
+                        value={scienceProject.independentVariable}
+                        onChange={(e) => setScienceProject({ ...scienceProject, independentVariable: e.target.value })}
+                        className="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-800"
+                      />
+                    </div>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+                      <label className="block font-bold text-slate-700">Dependent Variable:</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Germination Rate (% sprouted)"
+                        value={scienceProject.dependentVariable}
+                        onChange={(e) => setScienceProject({ ...scienceProject, dependentVariable: e.target.value })}
+                        className="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-800"
+                      />
+                    </div>
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg space-y-1">
+                      <label className="block font-bold text-emerald-800">Control Group Check:</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Pot with 0% salt water"
+                        value={scienceProject.controlGroup}
+                        onChange={(e) => setScienceProject({ ...scienceProject, controlGroup: e.target.value })}
+                        className="w-full border border-emerald-300 rounded px-2 py-1 text-xs text-emerald-900"
+                      />
+                    </div>
                   </div>
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    <strong className="block text-slate-700 mb-1">Dependent Variable:</strong>
-                    <span className="text-slate-600">{scienceProject.dependentVariable}</span>
-                  </div>
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                    <strong className="block text-emerald-800 mb-1">Control Group Check:</strong>
-                    <span className="text-emerald-700">{scienceProject.controlGroup}</span>
-                  </div>
-                </div>
 
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs">
-                  <strong className="text-blue-900 block mb-1">Hypothesis Guidance Statement:</strong>
-                  <p className="text-blue-800">{scienceProject.hypothesis}</p>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs space-y-1">
+                    <label className="text-blue-900 block font-bold">Hypothesis Statement:</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Higher salt concentrations in soil will decrease germination rate..."
+                      value={scienceProject.hypothesis}
+                      onChange={(e) => setScienceProject({ ...scienceProject, hypothesis: e.target.value })}
+                      className="w-full border border-blue-300 rounded px-2 py-1 text-xs text-blue-900"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Data Table Logging */}
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-3">
                 <h3 className="text-xs font-bold text-slate-800">Experimental Data Table Logging</h3>
                 <div className="space-y-2">
-                  {scienceProject.dataPoints.map((dp, idx) => (
-                    <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200 rounded text-xs flex justify-between items-center">
-                      <span className="font-semibold text-slate-700">Trial #{dp.trial}</span>
-                      <span className="font-mono text-slate-800">{dp.value}</span>
-                    </div>
-                  ))}
+                  {scienceProject.dataPoints.length > 0 ? (
+                    scienceProject.dataPoints.map((dp, idx) => (
+                      <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200 rounded text-xs flex justify-between items-center">
+                        <span className="font-semibold text-slate-700">Trial #{dp.trial}</span>
+                        <span className="font-mono text-slate-800">{dp.value}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">No experimental data recorded yet.</p>
+                  )}
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -1593,7 +2082,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Milestones & Teacher Feedback */}
               <div className="space-y-3">
                 <h3 className="text-xs font-bold text-slate-800">Milestones & Teacher Review Queue</h3>
                 {scienceProject.milestones.map((m) => (
@@ -1613,9 +2101,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ========================================================
-              MODULE 8: WORLD WINDOW (CENTRAL VALLEY LANGUAGE PRACTICE)
-             ======================================================== */}
+          {/* MODULE 8: WORLD WINDOW */}
           {activeTab === 'World Window' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
@@ -1699,9 +2185,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ========================================================
-              MODULE 9: CREATOR ARCADE (APPROVED DOMAINS ONLY)
-             ======================================================== */}
+          {/* MODULE 9: CREATOR ARCADE */}
           {activeTab === 'Creator Arcade' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
@@ -1751,7 +2235,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Showcase Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {arcadeGames.map((game) => (
                   <div key={game.id} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-3">
@@ -1776,7 +2259,6 @@ export default function App() {
                       Open Verified Project <ExternalLink className="w-3 h-3" />
                     </a>
 
-                    {/* Peer Feedback Prompt */}
                     <div className="border-t border-slate-100 pt-2 space-y-2">
                       <strong className="text-[11px] text-slate-700 block">Structured Peer Feedback:</strong>
                       {game.feedback.map((fb, idx) => (
@@ -1815,54 +2297,37 @@ export default function App() {
             </div>
           )}
 
-          {/* ========================================================
-              MODULE 10: SAFETY, PRIVACY & PARENT INFORMATION
-             ======================================================== */}
+          {/* MODULE 10: SAFETY, PRIVACY & PARENT INFORMATION */}
           {activeTab === 'Safety & Parent Info' && (
             <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100 space-y-6 max-w-3xl mx-auto">
               <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                 <Shield className="w-8 h-8 text-blue-600" />
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">ValleyQuest Safety & Child Protection Architecture</h2>
-                  <p className="text-xs text-slate-500">Engineered specifically for Central Valley students, schools, and parents.</p>
+                  <h2 className="text-lg font-bold text-slate-800">Safety, Child Privacy & Protection Policies</h2>
+                  <p className="text-xs text-slate-500">Designed with strict minor safety protections for Central Valley school environments.</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Report, Block & Controls
-                  </h3>
-                  <p className="text-slate-600">Students and mentors can report posts or questions immediately. Automated filters block profane or PII content instantly.</p>
+              <div className="space-y-4 text-xs text-slate-600">
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 space-y-1">
+                  <h3 className="font-bold text-blue-900 text-sm">1. Automatic PII Protection</h3>
+                  <p>Student names are automatically formatted to first name and last initial only. Telephone numbers and email addresses are filtered immediately upon entry.</p>
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Teacher Review Queue
-                  </h3>
-                  <p className="text-slate-600">Questions and external project submissions pass through a teacher moderation queue before public site display.</p>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <h3 className="font-bold text-slate-800 text-sm">2. No Unrestricted Direct Messaging</h3>
+                  <p>ValleyQuest disables private direct messaging between students to prevent potential harassment. All interaction occurs within moderated public subject queues.</p>
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> First Name & Last Initial Formatting
-                  </h3>
-                  <p className="text-slate-600">Student full names are automatically truncated (e.g. Maria G.) to preserve individual privacy.</p>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <h3 className="font-bold text-slate-800 text-sm">3. Domain Safety Boundary</h3>
+                  <p>External links submitted in Creator Arcade are restricted strictly to pre-approved educational domains (Scratch, GitHub, Replit).</p>
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> No Private Direct Messages
-                  </h3>
-                  <p className="text-slate-600">Unmonitored 1-on-1 private messaging between students or unverified adults is prohibited.</p>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <h3 className="font-bold text-slate-800 text-sm">4. Mandatory Content Moderation</h3>
+                  <p>All student project submissions and study questions pass through an automated keyword and PII filter before entering teacher review queues.</p>
                 </div>
-              </div>
-
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl space-y-2 text-xs">
-                <h3 className="font-bold text-blue-900">Parent Data & Deletion Policy</h3>
-                <p className="text-blue-800">
-                  Parents have full rights to request data deletion, view connected class groups, or manage their child's account settings by contacting their school district administrator.
-                </p>
               </div>
             </div>
           )}
@@ -1871,6 +2336,11 @@ export default function App() {
     </div>
   );
 }
+
+
+
+
+
 
 
 
